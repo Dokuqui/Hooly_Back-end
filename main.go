@@ -2,18 +2,21 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"gitlab.com/hooly2/back/db"
 	"log"
 )
 
 func main() {
-	// TODO: rework server init
+	// Connect to MongoDB
+	db.Connect()
 
+	// Initialize Gin router
 	r := gin.Default()
 
-	// Define a simple GET route for testing
-	r.GET("/", func(c *gin.Context) {
+	// Test route to confirm MongoDB connection
+	r.GET("/test-db", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"message": "Welcome to Hooly Parking Reservation System",
+			"message": "MongoDB connection successful!",
 		})
 	})
 
