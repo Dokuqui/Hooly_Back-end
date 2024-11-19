@@ -6,3 +6,10 @@ pre-commit:
       run: go vet ./...
     go-sec:
       run: gosec ./...
+
+commit-msg:
+  commands:
+    check-commit-msg:
+      run: bash ./commit-msg.sh ${1}
+
+
