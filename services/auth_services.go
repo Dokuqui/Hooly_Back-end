@@ -27,7 +27,7 @@ func NewAuthService() *AuthService {
 }
 
 // Signup handles new user creation
-func (s *AuthService) Signup(email, password string) (*model.User, error) {
+func (s *AuthService) Signup(email, firstname, lastname, password string) (*model.User, error) {
 	var existingUser model.User
 	err := s.UserCollection.FindOne(context.TODO(), bson.M{"email": email}).Decode(&existingUser)
 	if err == nil {
@@ -40,10 +40,12 @@ func (s *AuthService) Signup(email, password string) (*model.User, error) {
 	}
 
 	newUser := model.User{
-		ID:       primitive.NewObjectID(),
-		Email:    email,
-		Password: string(hashedPassword),
-		Role:     "user",
+		ID:        primitive.NewObjectID(),
+		Email:     email,
+		Firstname: firstname,
+		Lastname:  lastname,
+		Password:  string(hashedPassword),
+		Role:      "user",
 	}
 
 	_, err = s.UserCollection.InsertOne(context.TODO(), newUser)

@@ -28,7 +28,7 @@ func (ac *AuthController) Signup(c *gin.Context) {
 	}
 
 	// Call the AuthService Signup function
-	newUser, err := ac.AuthService.Signup(user.Email, user.Password)
+	newUser, err := ac.AuthService.Signup(user.Email, user.Firstname, user.Lastname, user.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
