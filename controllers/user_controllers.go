@@ -17,6 +17,58 @@ func NewUserController(userController *services.UserService) *UserController {
 	return &UserController{UserServices: userController}
 }
 
+// CreateUser handles creating a new user
+func (uc *UserController) CreateUser(c *gin.Context) {
+	// Extract the current user's role from the JWT token
+	currentRole := c.GetString("role")
+	if currentRole != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
+		return
+	}
+
+	// Bind the request body to a struct
+	var userInput struct {
+		FirstName string     `json:"first_name" binding:"required"`
+		LastName  string     `json:"last_name" binding:"required"`
+		Email     string     `json:"email" binding:"required,email"`
+		Password  string     `json:"password" binding:"required,min=6"`
+		Role      model.Role `json:"role" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&userInput); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Call the UserService to create the new user
+	newUser, err := uc.UserServices.CreateUser(
+		userInput.FirstName,
+		userInput.LastName,
+		userInput.Email,
+		userInput.Password,
+		userInput.Role,
+	)
+	if err != nil {
+		if err.Error() == "email already registered" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	// Respond with the created user (excluding the password)
+	c.JSON(http.StatusCreated, gin.H{
+		"user": gin.H{
+			"id":         newUser.ID.Hex(),
+			"first_name": newUser.Firstname,
+			"last_name":  newUser.Lastname,
+			"email":      newUser.Email,
+			"role":       newUser.Role,
+		},
+	})
+}
+
 // GetAllUsers fetches the list of all users
 func (uc *UserController) GetAllUsers(c *gin.Context) {
 	// Extract the current user's role from the JWT token (JWT middleware will set this in context)
