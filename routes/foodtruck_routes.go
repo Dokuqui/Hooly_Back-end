@@ -3,14 +3,11 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"gitlab.com/hooly2/back/controllers"
-	"gitlab.com/hooly2/back/services"
 )
 
-func FoodtruckRoutes(router *gin.Engine) {
-	foodtruckService := services.NewFoodtruckService()
-	foodtruckController := controllers.NewFoodtruckController(foodtruckService)
+func RegisterFoodtruckRoutes(r *gin.Engine, foodtruckController *controllers.FoodtruckController) {
 
-	foodtruck := router.Group("/foodtrucks")
+	foodtruck := r.Group("/foodtrucks")
 	{
 		foodtruck.GET("/:id/", foodtruckController.GetFoodtruckByID)
 		foodtruck.GET("/", foodtruckController.GetFoodtrucksByName)
