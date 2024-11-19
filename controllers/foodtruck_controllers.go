@@ -8,11 +8,11 @@ import (
 )
 
 type FoodtruckController struct {
-	Service *services.FoodtruckService
+	FoodtruckServices *services.FoodtruckService
 }
 
-func NewFoodtruckController(service *services.FoodtruckService) *FoodtruckController {
-	return &FoodtruckController{Service: service}
+func NewFoodtruckController(foodtruckController *services.FoodtruckService) *FoodtruckController {
+	return &FoodtruckController{FoodtruckServices: foodtruckController}
 }
 
 // Add a foodtruck
@@ -23,7 +23,7 @@ func (c *FoodtruckController) CreateFoodtruck(ctx *gin.Context) {
 		return
 	}
 
-	added, err := c.Service.Add(&foodtruck)
+	added, err := c.FoodtruckServices.AddFoodtruck(&foodtruck)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create food truck"})
 		return
@@ -36,7 +36,7 @@ func (c *FoodtruckController) CreateFoodtruck(ctx *gin.Context) {
 func (c *FoodtruckController) GetFoodtruckByID(ctx *gin.Context) {
 	id := ctx.Param("id")
 
-	foodtruck, err := c.Service.FindByID(id)
+	foodtruck, err := c.FoodtruckServices.FindFoodtruckByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Food truck not found"})
 		return
@@ -49,7 +49,7 @@ func (c *FoodtruckController) GetFoodtruckByID(ctx *gin.Context) {
 func (c *FoodtruckController) GetFoodtrucksByName(ctx *gin.Context) {
 	name := ctx.Query("name")
 
-	foodtrucks, err := c.Service.FindByName(name)
+	foodtrucks, err := c.FoodtruckServices.FindFoodtruckByName(name)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch food trucks"})
 		return
@@ -68,7 +68,7 @@ func (c *FoodtruckController) UpdateFoodtruck(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.Service.Update(id, &foodtruck); err != nil {
+	if err := c.FoodtruckServices.UpdateFoodtruck(id, &foodtruck); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update food truck"})
 		return
 	}
@@ -80,7 +80,7 @@ func (c *FoodtruckController) UpdateFoodtruck(ctx *gin.Context) {
 func (c *FoodtruckController) DeleteFoodtruck(ctx *gin.Context) {
 	id := ctx.Param("id")
 
-	if err := c.Service.Delete(id); err != nil {
+	if err := c.FoodtruckServices.DeleteFoodtruck(id); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete food truck"})
 		return
 	}
