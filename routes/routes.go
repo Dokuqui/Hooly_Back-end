@@ -26,6 +26,8 @@ func SetupRouter() *gin.Engine {
 		AllowCredentials: true,
 	}
 
+	r.Use(cors.New(config))
+
 	// Initialize services
 	userService := services.NewUserService()
 	authService := services.NewAuthService()
@@ -42,8 +44,6 @@ func SetupRouter() *gin.Engine {
 	RegisterAuthRoutes(r, authController)
 	RegisterAdminRoutes(r, userController, logController, monitoringController)
 	RegisterUserRoutes(r, userController)
-
-	r.Use(cors.New(config))
 
 	return r
 }
