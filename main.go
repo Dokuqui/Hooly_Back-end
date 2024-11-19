@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"gitlab.com/hooly2/back/db"
+	"gitlab.com/hooly2/back/routes"
 	"log"
 )
 
@@ -10,15 +10,8 @@ func main() {
 	// Connect to MongoDB
 	db.Connect()
 
-	// Initialize Gin router
-	r := gin.Default()
-
-	// Test route to confirm MongoDB connection
-	r.GET("/test-db", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "MongoDB connection successful!",
-		})
-	})
+	// Set up routes
+	r := routes.SetupRouter()
 
 	// Run the server on port 8080
 	if err := r.Run(":8080"); err != nil {
