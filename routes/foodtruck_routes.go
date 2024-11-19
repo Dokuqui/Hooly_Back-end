@@ -13,10 +13,9 @@ func FoodtruckRoutes(router *gin.Engine) {
 	foodtruck := router.Group("/foodtrucks")
 	{
 		foodtruck.GET("/:id/", foodtruckController.GetFoodtruckByID)
-		foodtruck.GET("/:name", foodtruckController.GetFoodtrucksByName)
+		foodtruck.GET("/", foodtruckController.GetFoodtrucksByName)
 		foodtruck.POST("/add", foodtruckController.CreateFoodtruck)
 		foodtruck.PUT("/:id", foodtruckController.UpdateFoodtruck)
 		foodtruck.DELETE("/:id", foodtruckController.DeleteFoodtruck)
-
 	}
 }
