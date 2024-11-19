@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"time"
 )
 
@@ -42,6 +43,7 @@ func (s *AuthService) Signup(email, password string) (*model.User, error) {
 		ID:       primitive.NewObjectID(),
 		Email:    email,
 		Password: string(hashedPassword),
+		Role:     "user",
 	}
 
 	_, err = s.UserCollection.InsertOne(context.TODO(), newUser)
@@ -57,17 +59,20 @@ func (s *AuthService) Login(email, password string) (string, error) {
 	var user model.User
 	err := s.UserCollection.FindOne(context.Background(), bson.M{"email": email}).Decode(&user)
 	if err != nil {
+		log.Println("Error finding user:", err)
 		return "", errors.New("invalid email or password")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
+		log.Println("Error comparing password:", err)
 		return "", errors.New("invalid email or password")
 	}
 
 	// Generate JWT token
 	token, err := generateJWT(user.ID.Hex())
 	if err != nil {
+		log.Println("Error generating JWT:", err)
 		return "", errors.New("failed to generate token")
 	}
 
@@ -82,5 +87,11 @@ func generateJWT(userID string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	signedToken, err := token.SignedString(jwtSecret)
+	if err != nil {
+		log.Println("Error signing JWT:", err) // Log the error
+		return "", err
+	}
+
+	return signedToken, nil
 }
