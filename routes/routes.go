@@ -35,6 +35,7 @@ func SetupRouter() *gin.Engine {
 	monitoringService := services.NewMonitoringService()
 	foodtruckService := services.NewFoodtruckService()
 	parkingSpotService := services.NewParkingSpotService()
+	reservationService := services.NewReservationService()
 
 	// Initialize controllers
 	userController := controllers.NewUserController(userService)
@@ -43,13 +44,15 @@ func SetupRouter() *gin.Engine {
 	monitoringController := controllers.NewMonitoringController(monitoringService)
 	foodtruckController := controllers.NewFoodtruckController(foodtruckService)
 	parkingSpotController := controllers.NewParkingSpotController(parkingSpotService)
+	reservationController := controllers.NewReservationController(reservationService)
 
 	// Define routes
 	RegisterAuthRoutes(r, authController)
-	RegisterAdminRoutes(r, userController, logController, monitoringController)
-	RegisterUserRoutes(r, userController)
+	RegisterAdminRoutes(r, userController, reservationController, logController, monitoringController)
+	RegisterUserRoutes(r, userController, reservationController)
 	RegisterFoodtruckRoutes(r, foodtruckController)
 	RegisterParkingSpotRoutes(r, parkingSpotController)
+	RegisterReservationRoutes(r, reservationController)
 
 	return r
 }
