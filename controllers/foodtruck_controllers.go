@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.com/hooly2/back/model"
 	"gitlab.com/hooly2/back/services"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 )
 
@@ -23,6 +24,14 @@ func (c *FoodtruckController) CreateFoodtruck(ctx *gin.Context) {
 		return
 	}
 
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	foodtruck.UserID = userID.(primitive.ObjectID)
+
 	added, err := c.FoodtruckServices.AddFoodtruck(&foodtruck)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create food truck"})
@@ -36,7 +45,14 @@ func (c *FoodtruckController) CreateFoodtruck(ctx *gin.Context) {
 func (c *FoodtruckController) GetFoodtruckByID(ctx *gin.Context) {
 	id := ctx.Param("id")
 
-	foodtruck, err := c.FoodtruckServices.FindFoodtruckByID(id)
+	// Extract userID from context
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	foodtruck, err := c.FoodtruckServices.FindFoodtruckByID(userID.(string), id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Food truck not found"})
 		return
@@ -49,7 +65,14 @@ func (c *FoodtruckController) GetFoodtruckByID(ctx *gin.Context) {
 func (c *FoodtruckController) GetFoodtrucksByName(ctx *gin.Context) {
 	name := ctx.Query("name")
 
-	foodtrucks, err := c.FoodtruckServices.FindFoodtruckByName(name)
+	// Extract userID from context
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	foodtrucks, err := c.FoodtruckServices.FindFoodtruckByName(userID.(string), name)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch food trucks"})
 		return
@@ -63,12 +86,19 @@ func (c *FoodtruckController) UpdateFoodtruck(ctx *gin.Context) {
 	id := ctx.Param("id")
 
 	var foodtruck model.Foodtruck
+
 	if err := ctx.ShouldBindJSON(&foodtruck); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	if err := c.FoodtruckServices.UpdateFoodtruck(id, &foodtruck); err != nil {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	if err := c.FoodtruckServices.UpdateFoodtruck(id, userID.(primitive.ObjectID), &foodtruck); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update food truck"})
 		return
 	}

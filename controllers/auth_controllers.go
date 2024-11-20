@@ -20,42 +20,55 @@ func NewAuthController(authService *services.AuthService) *AuthController {
 func (ac *AuthController) Signup(c *gin.Context) {
 	var user model.User
 
-	// Bind the incoming JSON body to the User model
 	if err := c.ShouldBindJSON(&user); err != nil {
 		log.Println("Error binding JSON:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
 		return
 	}
 
-	// Call the AuthService Signup function
-	newUser, err := ac.AuthService.Signup(user.Email, user.Firstname, user.Lastname, user.Password)
+	newUser, token, err := ac.AuthService.Signup(user.Email, user.Firstname, user.Lastname, user.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Respond with the newly created user (excluding password)
-	c.JSON(http.StatusOK, gin.H{"user": newUser})
+	// Respond with the user details and JWT token
+	c.JSON(http.StatusOK, gin.H{
+		"user":  gin.H{"id": newUser.ID, "email": newUser.Email, "firstname": newUser.Firstname, "lastname": newUser.Lastname},
+		"token": token,
+	})
 }
 
 // Login handles user login
 func (ac *AuthController) Login(c *gin.Context) {
-	var user model.User
+	var loginRequest struct {
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required"`
+	}
 
-	// Bind the incoming JSON body to the User model
-	if err := c.ShouldBindJSON(&user); err != nil {
+	// Bind the incoming JSON body to the loginRequest struct
+	if err := c.ShouldBindJSON(&loginRequest); err != nil {
 		log.Println("Error binding JSON:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
 		return
 	}
 
 	// Call the AuthService Login function
-	token, err := ac.AuthService.Login(user.Email, user.Password)
+	token, user, err := ac.AuthService.Login(loginRequest.Email, loginRequest.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
-	// Respond with the JWT token
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	// Respond with the JWT token and user details
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+		"user": gin.H{
+			"id":        user.ID.Hex(),
+			"email":     user.Email,
+			"firstname": user.Firstname,
+			"lastname":  user.Lastname,
+			"role":      user.Role,
+		},
+	})
 }
