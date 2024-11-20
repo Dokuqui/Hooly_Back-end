@@ -7,13 +7,17 @@ import (
 )
 
 // RegisterAdminRoutes defines admin-only routes
-func RegisterAdminRoutes(r *gin.Engine, userController *controllers.UserController, logController *controllers.LogController, monitoringController *controllers.MonitoringController) {
+func RegisterAdminRoutes(r *gin.Engine, userController *controllers.UserController, reservationController *controllers.ReservationController, logController *controllers.LogController, monitoringController *controllers.MonitoringController) {
 	admin := r.Group("/")
 	admin.Use(middleware.JWTMiddleware(), middleware.RoleMiddleware("admin"))
 	{
 		admin.GET("/users", userController.GetAllUsers)
 		admin.POST("/users", userController.CreateUser)
 		admin.DELETE("/users/:id", userController.DeleteUser)
+
+		// Reservation routes
+		admin.GET("/reservations", reservationController.GetAllReservationsHandler)
+		admin.DELETE("/reservations/:id", reservationController.AdminDeleteReservationHandler)
 
 		// Log routes
 		admin.POST("/logs", logController.CreateLogHandler)

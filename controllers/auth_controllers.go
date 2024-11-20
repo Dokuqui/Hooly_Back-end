@@ -41,20 +41,17 @@ func (ac *AuthController) Signup(c *gin.Context) {
 
 // Login handles user login
 func (ac *AuthController) Login(c *gin.Context) {
-	var loginRequest struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required"`
-	}
+	var user model.User
 
 	// Bind the incoming JSON body to the loginRequest struct
-	if err := c.ShouldBindJSON(&loginRequest); err != nil {
+	if err := c.ShouldBindJSON(&user); err != nil {
 		log.Println("Error binding JSON:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
 		return
 	}
 
 	// Call the AuthService Login function
-	token, user, err := ac.AuthService.Login(loginRequest.Email, loginRequest.Password)
+	token, err := ac.AuthService.Login(user.Email, user.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return

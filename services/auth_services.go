@@ -63,30 +63,27 @@ func (s *AuthService) Signup(email, firstname, lastname, password string) (*mode
 }
 
 // Login handles user login to dashboard
-func (s *AuthService) Login(email, password string) (string, *model.User, error) {
+func (s *AuthService) Login(email, password string) (string, error) {
 	var user model.User
 	err := s.UserCollection.FindOne(context.Background(), bson.M{"email": email}).Decode(&user)
 	if err != nil {
-		log.Println("Error finding user:", err)
-		return "", nil, errors.New("invalid email or password")
+		return "", errors.New("invalid email or password")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
 		log.Println("Error comparing password:", err)
-		return "", nil, errors.New("invalid email or password")
+		return "", errors.New("invalid email or password")
 	}
 
 	// Generate JWT token with user ID and role
 	token, err := generateJWT(user.ID.Hex(), string(user.Role))
 	if err != nil {
 		log.Println("Error generating JWT:", err)
-		return "", nil, errors.New("failed to generate token")
+		return "", errors.New("failed to generate token")
 	}
 
-	// Exclude the password from the returned user object for security
-	user.Password = ""
-	return token, &user, nil
+	return token, nil
 }
 
 // generateJWT generating JWT token for login
