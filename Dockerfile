@@ -1,30 +1,20 @@
-FROM golang:1.19
+# Stage 1: Build the Go application
+FROM golang:1.23 
 
-# Set destination for COPY
 WORKDIR /app
 
-# Download Go modules
-COPY go.mod go.sum ./
-RUN go mod download
 
 # Copy the source code
-COPY *.go ./
+COPY . .
 
-# Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /holly-back
+RUN go mod download
 
-# Start a new image for the final container
-FROM alpine:latest
+# Build the Go binary (output it to /holly-back)
+RUN CGO_ENABLED=0 GOOS=linux go build -o holly-back
 
-# Set the working directory inside the new container
-WORKDIR /root/
 
-# Copy the Go binary from the builder stage
-COPY --from=builder /holly-back .
-
-# we can document in the Dockerfile what ports
-# the application is going to listen on by default.
+# Expose the default port (8080)
 EXPOSE 8080
 
-# Run
-CMD ["/holly-back"]
+# Run the Go binary
+CMD ["./holly-back"]
