@@ -5,6 +5,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.com/hooly2/back/model"
 	"gitlab.com/hooly2/back/services"
+	"gitlab.com/hooly2/back/utils"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )
@@ -21,6 +23,8 @@ func NewUserController(userController *services.UserService) *UserController {
 func (uc *UserController) CreateUser(c *gin.Context) {
 	// Extract the current user's role from the JWT token
 	currentRole := c.GetString("role")
+
+	// Ensure only admin users can access this endpoint
 	if currentRole != "admin" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 		return
@@ -72,11 +76,10 @@ func (uc *UserController) CreateUser(c *gin.Context) {
 // GetAllUsers fetches the list of all users
 func (uc *UserController) GetAllUsers(c *gin.Context) {
 	// Extract the current user's role from the JWT token (JWT middleware will set this in context)
-	currentRole := c.GetString("role")
+	userRole, _ := c.Get("role")
 
-	// Ensure that only admin users can access this endpoint
-	if currentRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
+	if userRole != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
 		return
 	}
 
@@ -116,13 +119,14 @@ func (uc *UserController) GetUserDetails(c *gin.Context) {
 func (uc *UserController) UpdateUserDetails(c *gin.Context) {
 	// Extract user ID from URL parameter
 	userID := c.Param("id")
+	userIDPrimitive, _ := primitive.ObjectIDFromHex(userID)
 
 	// Extract the current user's ID and role from the JWT token (role set by middleware)
-	currentUserID := c.GetString("user_id")
-	currentRole := c.GetString("role")
+	currentUserID, _ := utils.GetUserIDFromContext(c)
+	userRole, _ := c.Get("role")
 
 	// Ensure that the current user is either the user themselves or an admin
-	if currentUserID != userID && currentRole != "admin" {
+	if currentUserID != userIDPrimitive && userRole != "admin" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 		return
 	}
@@ -151,15 +155,16 @@ func (uc *UserController) UpdateUserDetails(c *gin.Context) {
 
 // DeleteUser deletes a specific user
 func (uc *UserController) DeleteUser(c *gin.Context) {
-	// Get the user ID from the URL parameter
+	// Extract user ID from URL parameter
 	userID := c.Param("id")
+	userIDPrimitive, _ := primitive.ObjectIDFromHex(userID)
 
-	// Get the current user's ID and role from the JWT token (JWT middleware will add these)
-	currentUserID := c.GetString("user_id")
-	currentRole := c.GetString("role")
+	// Extract the current user's ID and role from the JWT token (role set by middleware)
+	currentUserID, _ := utils.GetUserIDFromContext(c)
+	userRole, _ := c.Get("role")
 
-	// Check if the current user is an admin or trying to delete their own account
-	if currentUserID != userID && currentRole != "admin" { // Allow deletion only if it's the same user or admin
+	// Ensure that the current user is either the user themselves or an admin
+	if currentUserID != userIDPrimitive && userRole != "admin" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 		return
 	}

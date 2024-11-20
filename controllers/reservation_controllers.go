@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.com/hooly2/back/model"
 	"gitlab.com/hooly2/back/services"
+	"gitlab.com/hooly2/back/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
@@ -41,14 +42,13 @@ func (c *ReservationController) GetAllReservationsHandler(ctx *gin.Context) {
 // GetUserReservationsHandler retrieves reservations for the logged-in user.
 func (c *ReservationController) GetUserReservationsHandler(ctx *gin.Context) {
 	// Get user_id from context (set during authentication)
-	userID, _ := ctx.Get("user_id")
-	userIDPrimitive, ok := userID.(primitive.ObjectID)
-	if !ok {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "user_id is not primitive.ObjectID"})
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found in context"})
 		return
 	}
 
-	reservations, err := c.ReservationService.GetUserReservations(ctx, userIDPrimitive)
+	reservations, err := c.ReservationService.GetUserReservations(ctx, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user reservations"})
 		return
@@ -66,8 +66,14 @@ func (c *ReservationController) GetReservationByIDHandler(ctx *gin.Context) {
 		return
 	}
 
-	userID, _ := ctx.Get("userID")
-	reservation, err := c.ReservationService.GetReservationByID(ctx, userID.(primitive.ObjectID), reservationID)
+	// Get user_id from context (set during authentication)
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found in context"})
+		return
+	}
+
+	reservation, err := c.ReservationService.GetReservationByID(ctx, reservationID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -79,16 +85,34 @@ func (c *ReservationController) GetReservationByIDHandler(ctx *gin.Context) {
 // CreateReservationHandler creates a new reservation.
 func (c *ReservationController) CreateReservationHandler(ctx *gin.Context) {
 	var reservation model.Reservation
+	// Bind the JSON body to the reservation struct
 	if err := ctx.ShouldBindJSON(&reservation); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Retrieve the userID from the context (set by JWT middleware)
+	userID, exists := ctx.Get("userId")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Convert the userID to a primitive.ObjectID
+	objectID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+		return
+	}
+	reservation.UserID = objectID
+
+	// Call the service to create the reservation
 	if err := c.ReservationService.CreateReservation(ctx, &reservation); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Respond with the created reservation
 	ctx.JSON(http.StatusCreated, gin.H{"data": reservation})
 }
 
@@ -107,8 +131,14 @@ func (c *ReservationController) UpdateReservationHandler(ctx *gin.Context) {
 		return
 	}
 
-	userID, _ := ctx.Get("userID")
-	if err := c.ReservationService.UpdateReservation(ctx, userID.(primitive.ObjectID), updateData, reservationID); err != nil {
+	// Get user_id from context (set during authentication)
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found in context"})
+		return
+	}
+
+	if err := c.ReservationService.UpdateReservation(ctx, userID, updateData, reservationID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -125,8 +155,13 @@ func (c *ReservationController) DeleteReservationHandler(ctx *gin.Context) {
 		return
 	}
 
-	userID, _ := ctx.Get("userID")
-	if err := c.ReservationService.DeleteReservation(ctx, userID.(primitive.ObjectID), reservationID); err != nil {
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found in context"})
+		return
+	}
+
+	if err := c.ReservationService.DeleteReservation(ctx, userID, reservationID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

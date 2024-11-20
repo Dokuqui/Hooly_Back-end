@@ -3,15 +3,17 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"gitlab.com/hooly2/back/controllers"
+	"gitlab.com/hooly2/back/middleware"
 )
 
 func RegisterReservationRoutes(r *gin.Engine, reservationController *controllers.ReservationController) {
 
-	reservation := r.Group("/reservation")
+	reservation := r.Group("/reservation", middleware.AuthMiddleware())
 	{
 		reservation.GET("/admin", reservationController.GetAllReservationsHandler)
+		reservation.GET("/:id", reservationController.GetReservationByIDHandler)
 		reservation.DELETE("/admin/:id", reservationController.AdminDeleteReservationHandler)
-		reservation.POST("", reservationController.CreateReservationHandler)
+		reservation.POST("/", reservationController.CreateReservationHandler)
 		reservation.PUT("/:id", reservationController.UpdateReservationHandler)
 		reservation.DELETE("/:id", reservationController.DeleteReservationHandler)
 		reservation.GET("/user", reservationController.GetUserReservationsHandler)
