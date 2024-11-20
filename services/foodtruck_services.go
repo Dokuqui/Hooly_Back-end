@@ -67,6 +67,27 @@ func (s *FoodtruckService) FindFoodtruckByName(name, userID string) ([]model.Foo
 	return foodtrucks, nil
 }
 
+// GetAllFoodtrucksByUserID retrieves all food trucks for a specific user
+func (s *FoodtruckService) GetAllFoodtrucksByUserID(userID string) ([]model.Foodtruck, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Use the userID as a filter
+	cursor, err := s.FoodtruckCollection.Find(ctx, bson.M{"user_id": userID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Decode the retrieved documents into a slice of Foodtruck
+	var foodtrucks []model.Foodtruck
+	if err := cursor.All(ctx, &foodtrucks); err != nil {
+		return nil, err
+	}
+
+	return foodtrucks, nil
+}
+
 // AddFoodtruck Add a foodtruck
 func (s *FoodtruckService) AddFoodtruck(foodtruck *model.Foodtruck) (*model.Foodtruck, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
