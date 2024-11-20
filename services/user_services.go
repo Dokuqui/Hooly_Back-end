@@ -22,7 +22,7 @@ func NewUserService() *UserService {
 }
 
 // CreateUser handles the creation of a new user
-func (s *UserService) CreateUser(firstName, lastName, email, password string, role model.Role) (*model.User, error) {
+func (s *UserService) CreateUser(firstName, lastName, email, password, role string) (*model.User, error) {
 	var existingUser model.User
 	err := s.UserCollection.FindOne(context.TODO(), bson.M{"email": email}).Decode(&existingUser)
 	if err == nil {

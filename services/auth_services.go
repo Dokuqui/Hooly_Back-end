@@ -3,18 +3,15 @@ package services
 import (
 	"context"
 	"errors"
-	"github.com/golang-jwt/jwt/v5"
 	"gitlab.com/hooly2/back/db"
 	"gitlab.com/hooly2/back/model"
+	"gitlab.com/hooly2/back/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 	"log"
-	"time"
 )
-
-var jwtSecret = []byte("secret")
 
 type AuthService struct {
 	UserCollection *mongo.Collection
@@ -45,7 +42,7 @@ func (s *AuthService) Signup(email, firstname, lastname, password string) (*mode
 		Firstname: firstname,
 		Lastname:  lastname,
 		Password:  string(hashedPassword),
-		Role:      "user",
+		Role:      "user", // default role is "user"
 	}
 
 	_, err = s.UserCollection.InsertOne(context.TODO(), newUser)
@@ -54,7 +51,7 @@ func (s *AuthService) Signup(email, firstname, lastname, password string) (*mode
 	}
 
 	// Generate a JWT for the newly created user
-	token, err := generateJWT(newUser.ID.Hex(), string(newUser.Role))
+	token, err := utils.GenerateJWT(newUser.ID.Hex(), newUser.Role) // using the GenerateJWT function
 	if err != nil {
 		return nil, "", errors.New("failed to generate token")
 	}
@@ -77,29 +74,11 @@ func (s *AuthService) Login(email, password string) (string, error) {
 	}
 
 	// Generate JWT token with user ID and role
-	token, err := generateJWT(user.ID.Hex(), string(user.Role))
+	token, err := utils.GenerateJWT(user.ID.Hex(), user.Role) // using the GenerateJWT function
 	if err != nil {
 		log.Println("Error generating JWT:", err)
 		return "", errors.New("failed to generate token")
 	}
 
 	return token, nil
-}
-
-// generateJWT generating JWT token for login
-func generateJWT(userID, role string) (string, error) {
-	claims := jwt.MapClaims{
-		"user_id": userID,
-		"role":    role,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString(jwtSecret)
-	if err != nil {
-		log.Println("Error signing JWT:", err)
-		return "", err
-	}
-
-	return signedToken, nil
 }

@@ -48,8 +48,8 @@ func SetupRouter() *gin.Engine {
 
 	// Define routes
 	RegisterAuthRoutes(r, authController)
-	RegisterAdminRoutes(r, userController, reservationController, logController, monitoringController)
-	RegisterUserRoutes(r, userController, reservationController)
+	RegisterAdminRoutes(r, userController, logController, monitoringController)
+	RegisterUserRoutes(r, userController)
 	RegisterFoodtruckRoutes(r, foodtruckController)
 	RegisterParkingSpotRoutes(r, parkingSpotController)
 	RegisterReservationRoutes(r, reservationController)

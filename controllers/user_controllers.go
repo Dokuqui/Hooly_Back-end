@@ -28,11 +28,11 @@ func (uc *UserController) CreateUser(c *gin.Context) {
 
 	// Bind the request body to a struct
 	var userInput struct {
-		FirstName string     `json:"first_name" binding:"required"`
-		LastName  string     `json:"last_name" binding:"required"`
-		Email     string     `json:"email" binding:"required,email"`
-		Password  string     `json:"password" binding:"required,min=6"`
-		Role      model.Role `json:"role" binding:"required"`
+		FirstName string `json:"first_name" binding:"required"`
+		LastName  string `json:"last_name" binding:"required"`
+		Email     string `json:"email" binding:"required,email"`
+		Password  string `json:"password" binding:"required,min=6"`
+		Role      string `json:"role" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&userInput); err != nil {
