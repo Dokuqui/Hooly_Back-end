@@ -81,6 +81,25 @@ func (c *FoodtruckController) GetFoodtrucksByName(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, foodtrucks)
 }
 
+// GetAllFoodtrucksByUserID retrieves all food trucks associated with the authenticated user
+func (c *FoodtruckController) GetAllFoodtrucksByUserID(ctx *gin.Context) {
+	// Extract userID from context
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Fetch all food trucks for the user
+	foodtrucks, err := c.FoodtruckServices.GetAllFoodtrucksByUserID(userID.(string))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch food trucks"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, foodtrucks)
+}
+
 // Update a foodtruck
 func (c *FoodtruckController) UpdateFoodtruck(ctx *gin.Context) {
 	id := ctx.Param("id")

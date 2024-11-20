@@ -11,6 +11,7 @@ func RegisterFoodtruckRoutes(r *gin.Engine, foodtruckController *controllers.Foo
 	{
 		foodtruck.GET("/:id/", foodtruckController.GetFoodtruckByID)
 		foodtruck.GET("/", foodtruckController.GetFoodtrucksByName)
+		foodtruck.GET("/my-foodtrucks", foodtruckController.GetAllFoodtrucksByUserID)
 		foodtruck.POST("/add", foodtruckController.CreateFoodtruck)
 		foodtruck.PUT("/:id", foodtruckController.UpdateFoodtruck)
 		foodtruck.DELETE("/:id", foodtruckController.DeleteFoodtruck)
