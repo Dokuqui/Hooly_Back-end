@@ -23,8 +23,8 @@ func NewFoodtruckService() *FoodtruckService {
 	}
 }
 
-// Find by ID
-func (s *FoodtruckService) FindFoodtruckByID(id string) (*model.Foodtruck, error) {
+// FindFoodtruckByID Find food truck by id
+func (s *FoodtruckService) FindFoodtruckByID(userID, id string) (*model.Foodtruck, error) {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, errors.New("invalid ID format")
@@ -34,7 +34,10 @@ func (s *FoodtruckService) FindFoodtruckByID(id string) (*model.Foodtruck, error
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err = s.FoodtruckCollection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&foodtruck)
+	err = s.FoodtruckCollection.FindOne(ctx, bson.M{
+		"_id":     objectID,
+		"user_id": userID,
+	}).Decode(&foodtruck)
 	if err != nil {
 		return nil, err
 	}
@@ -42,12 +45,15 @@ func (s *FoodtruckService) FindFoodtruckByID(id string) (*model.Foodtruck, error
 	return &foodtruck, nil
 }
 
-// Find by NAME
-func (s *FoodtruckService) FindFoodtruckByName(name string) ([]model.Foodtruck, error) {
+// FindFoodtruckByName Find by NAME
+func (s *FoodtruckService) FindFoodtruckByName(name, userID string) ([]model.Foodtruck, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cursor, err := s.FoodtruckCollection.Find(ctx, bson.M{"name": name})
+	cursor, err := s.FoodtruckCollection.Find(ctx, bson.M{
+		"name":    name,
+		"user_id": userID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +67,7 @@ func (s *FoodtruckService) FindFoodtruckByName(name string) ([]model.Foodtruck, 
 	return foodtrucks, nil
 }
 
-// Add a foodtruck
+// AddFoodtruck Add a foodtruck
 func (s *FoodtruckService) AddFoodtruck(foodtruck *model.Foodtruck) (*model.Foodtruck, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -75,8 +81,8 @@ func (s *FoodtruckService) AddFoodtruck(foodtruck *model.Foodtruck) (*model.Food
 	return foodtruck, nil
 }
 
-// Update a foodtruck
-func (s *FoodtruckService) UpdateFoodtruck(id string, foodtruck *model.Foodtruck) error {
+// UpdateFoodtruck Update a foodtruck
+func (s *FoodtruckService) UpdateFoodtruck(id string, userID primitive.ObjectID, foodtruck *model.Foodtruck) error {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return errors.New("invalid ID format")
@@ -85,7 +91,7 @@ func (s *FoodtruckService) UpdateFoodtruck(id string, foodtruck *model.Foodtruck
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	filter := bson.M{"_id": objectID}
+	filter := bson.M{"_id": objectID, "user_id": userID}
 	update := bson.M{"$set": foodtruck}
 
 	_, err = s.FoodtruckCollection.UpdateOne(ctx, filter, update)
@@ -96,7 +102,7 @@ func (s *FoodtruckService) UpdateFoodtruck(id string, foodtruck *model.Foodtruck
 	return nil
 }
 
-// Delete a foodtruck
+// DeleteFoodtruck Delete a foodtruck
 func (s *FoodtruckService) DeleteFoodtruck(id string) error {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
