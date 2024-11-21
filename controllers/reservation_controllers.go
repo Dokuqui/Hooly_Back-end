@@ -7,7 +7,9 @@ import (
 	"gitlab.com/hooly2/back/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"log"
 	"net/http"
+	"strings"
 )
 
 type ReservationController struct {
@@ -85,35 +87,86 @@ func (c *ReservationController) GetReservationByIDHandler(ctx *gin.Context) {
 // CreateReservationHandler creates a new reservation.
 func (c *ReservationController) CreateReservationHandler(ctx *gin.Context) {
 	var reservation model.Reservation
+
 	// Bind the JSON body to the reservation struct
 	if err := ctx.ShouldBindJSON(&reservation); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Println("Failed to bind request body:", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
 		return
 	}
+
+	// Convert SpotID to ObjectID
+	spotObjectID, err := primitive.ObjectIDFromHex(reservation.SpotID.Hex())
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid SpotID"})
+		return
+	}
+	reservation.SpotID = spotObjectID
 
 	// Retrieve the userID from the context (set by JWT middleware)
 	userID, exists := ctx.Get("userId")
 	if !exists {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		log.Println("User ID not found in context")
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: user ID missing"})
 		return
 	}
 
 	// Convert the userID to a primitive.ObjectID
 	objectID, err := primitive.ObjectIDFromHex(userID.(string))
 	if err != nil {
+		log.Println("Invalid user ID:", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
 		return
 	}
 	reservation.UserID = objectID
 
+	// Validate that SpotID is a valid ObjectID
+	if !reservation.SpotID.IsZero() {
+		if _, err := primitive.ObjectIDFromHex(reservation.SpotID.Hex()); err != nil {
+			log.Println("Invalid Spot ID:", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Spot ID"})
+			return
+		}
+	}
+
 	// Call the service to create the reservation
-	if err := c.ReservationService.CreateReservation(ctx, &reservation); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	err = c.ReservationService.CreateReservation(ctx, &reservation)
+	if err != nil {
+		// Log error and respond based on the error message
+		log.Println("Failed to create reservation:", err)
+
+		// Check for specific error messages to send a 400 Bad Request
+		if strings.Contains(err.Error(), "spot is not available") {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Spot is not available"})
+		} else if strings.Contains(err.Error(), "already has a reservation") ||
+			strings.Contains(err.Error(), "no available spots") ||
+			strings.Contains(err.Error(), "past date or today") {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		} else {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create reservation"})
+		}
 		return
 	}
 
-	// Respond with the created reservation
-	ctx.JSON(http.StatusCreated, gin.H{"data": reservation})
+	// Ensure the reservation ID is set correctly after insertion
+	if reservation.ID.IsZero() {
+		log.Println("Reservation ID is empty, something went wrong")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create reservation"})
+		return
+	}
+
+	// Respond with the created reservation details
+	ctx.JSON(http.StatusCreated, gin.H{
+		"message": "Reservation created successfully",
+		"reservation": gin.H{
+			"id":            reservation.ID.Hex(),
+			"spot_id":       reservation.SpotID.Hex(),
+			"food_truck_id": reservation.FoodTruckID.Hex(),
+			"user_id":       reservation.UserID.Hex(),
+			"date":          reservation.Date,
+			"created_at":    reservation.CreatedAt,
+		},
+	})
 }
 
 // UpdateReservationHandler updates an existing reservation.
@@ -138,7 +191,7 @@ func (c *ReservationController) UpdateReservationHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ReservationService.UpdateReservation(ctx, userID, updateData, reservationID); err != nil {
+	if err := c.ReservationService.UpdateReservation(ctx, reservationID, updateData, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -161,7 +214,7 @@ func (c *ReservationController) DeleteReservationHandler(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.ReservationService.DeleteReservation(ctx, userID, reservationID); err != nil {
+	if err := c.ReservationService.DeleteReservation(ctx, reservationID, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -186,11 +239,13 @@ func (c *ReservationController) AdminDeleteReservationHandler(ctx *gin.Context) 
 		return
 	}
 
+	// Call AdminDeleteReservation to handle the deletion and reserved count update
 	err = c.ReservationService.AdminDeleteReservation(ctx, reservationID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete reservation"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Respond to the client with a success message
 	ctx.JSON(http.StatusOK, gin.H{"message": "reservation deleted successfully"})
 }

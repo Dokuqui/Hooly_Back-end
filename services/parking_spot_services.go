@@ -24,19 +24,21 @@ func NewParkingSpotService() *ParkingSpotService {
 
 // CreateParkingSpot Create parking spot for a specific day of the week
 func (s *ParkingSpotService) CreateParkingSpot(dayOfWeek string, ctx context.Context) (*model.ParkingSpot, error) {
-	// Ensure that only valid days are used
+	// Validate the day of the week
 	if !utils.IsValidDayOfWeek(dayOfWeek) {
 		return nil, errors.New("invalid day of the week")
 	}
 
-	// Check if the parking spot already exists for the given day
+	// Check if the parking spot already exists
 	var existingSpot model.ParkingSpot
 	err := s.ParkingSpotCollection.FindOne(ctx, bson.M{"day_of_week": dayOfWeek}).Decode(&existingSpot)
 	if err == nil {
 		return nil, errors.New("parking spot already exists for this day")
+	} else if err != mongo.ErrNoDocuments {
+		return nil, fmt.Errorf("failed to query parking spot: %v", err)
 	}
 
-	// Determine the number of available parking spots for the day
+	// Assign max capacity (custom for Friday)
 	totalSpaces := 7
 	if dayOfWeek == "Friday" {
 		totalSpaces = 6
@@ -47,10 +49,9 @@ func (s *ParkingSpotService) CreateParkingSpot(dayOfWeek string, ctx context.Con
 		ID:          primitive.NewObjectID(),
 		Day:         dayOfWeek,
 		MaxCapacity: totalSpaces,
-		Reserved:    false,
 	}
 
-	// Insert the new parking spot into the collection
+	// Insert the new parking spot
 	_, err = s.ParkingSpotCollection.InsertOne(ctx, newSpot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create parking spot: %v", err)
@@ -59,24 +60,27 @@ func (s *ParkingSpotService) CreateParkingSpot(dayOfWeek string, ctx context.Con
 	return &newSpot, nil
 }
 
-// ListAllParkingSpots Get all spots
+// ListAllParkingSpots retrieves all parking spots, filtered by day if specified
 func (s *ParkingSpotService) ListAllParkingSpots(dayOfWeek string, ctx context.Context) ([]model.ParkingSpot, error) {
+	// Create a dynamic filter
 	filter := bson.M{}
 	if dayOfWeek != "" {
 		filter["day_of_week"] = dayOfWeek
 	}
 
-	cursor, err := s.ParkingSpotCollection.Find(ctx, bson.D{})
+	// Query the collection
+	cursor, err := s.ParkingSpotCollection.Find(ctx, filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch parking spots: %v", err)
 	}
 	defer cursor.Close(ctx)
 
+	// Decode the results into a slice
 	var spots []model.ParkingSpot
 	for cursor.Next(ctx) {
 		var spot model.ParkingSpot
 		if err := cursor.Decode(&spot); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to decode parking spot: %v", err)
 		}
 		spots = append(spots, spot)
 	}
@@ -84,26 +88,12 @@ func (s *ParkingSpotService) ListAllParkingSpots(dayOfWeek string, ctx context.C
 	return spots, nil
 }
 
-// Check spot availability
-func (s *ParkingSpotService) IsSpotAvailable(spotID primitive.ObjectID) (bool, error) {
-	var spot model.ParkingSpot
-	err := s.ParkingSpotCollection.FindOne(context.TODO(), bson.M{"_id": spotID}).Decode(&spot)
+// UpdateReservationStatus updates the reservation status of a parking spot
+func (s *ParkingSpotService) UpdateReservationStatus(spotID primitive.ObjectID, reserved bool, ctx context.Context) error {
+	update := bson.M{"$set": bson.M{"reserved": reserved}}
+	_, err := s.ParkingSpotCollection.UpdateOne(ctx, bson.M{"_id": spotID}, update)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return false, errors.New("parking spot does not exist")
-		}
-		return false, err
+		return fmt.Errorf("failed to update reservation status: %v", err)
 	}
-
-	return !spot.Reserved, nil
-}
-
-// Update reservation status
-func (s *ParkingSpotService) UpdateReservationStatus(spotID primitive.ObjectID, reserved bool) error {
-	_, err := s.ParkingSpotCollection.UpdateOne(
-		context.TODO(),
-		bson.M{"_id": spotID},
-		bson.M{"$set": bson.M{"reserved": reserved}},
-	)
-	return err
+	return nil
 }
