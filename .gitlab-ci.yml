@@ -3,7 +3,7 @@ workflow:
     - if: '$CI_COMMIT_REF_NAME == "feat/docker_compose"'
 
 stages:
-  - build
+#  - build
   - format
   - vet
   - security
@@ -13,46 +13,48 @@ stages:
 
 before_script:
   - echo "Running before_script steps..."
-  - go version
   - go mod download
 
 format:
   stage: format
+  image: golang:latest
   script:
     - go fmt ./...
 
 vet:
   stage: vet
+  image: golang:latest
   script:
     - go vet -json ./...
 
 security:
   stage: security
+  image: golang:latest
   script:
     - go install github.com/securego/gosec/v2/cmd/gosec@latest
     - gosec ./...
 
 test:
   stage: test
+  image: golang:latest
   script:
     - go test ./... -v
 
-build:
-  stage: build
-  image: docker:20.10.9
-  services:
-    - name: docker:20.10.9-dind
-      command: ["--mtu=9001", "--exec-opt", "native.cgroupdriver=cgroupfs"]
-  before_script:
-    # Install Docker Compose
-    - apk add --no-cache docker-compose
-  script:
-    # Log in to GitLab registry
-    - echo "$CI_JOB_TOKEN" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
-    # Build and tag the Docker image
-    - docker-compose -f docker-compose.yml build
-    # Push the image to GitLab's registry
-    - docker-compose -f docker-compose.yml push
+#build:
+#  stage: build
+#  image: docker:20.10.9
+#  services:
+#    - name: docker:20.10.9-dind
+#  before_script:
+#    # Install Docker Compose
+#    - apk add --no-cache docker-compose
+#  script:
+#    # Log in to GitLab registry
+#    - echo "$CI_JOB_TOKEN" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+#    # Build and tag the Docker image
+#    - docker-compose -f docker-compose.yml build
+#    # Push the image to GitLab's registry
+#    - docker-compose -f docker-compose.yml push
 
 # SSH Connection Test Stage
 #test-ssh:
