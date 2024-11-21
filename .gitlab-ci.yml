@@ -1,14 +1,15 @@
 workflow:
   rules:
-    - if: '$CI_COMMIT_REF_NAME == "feat/docker_compose"'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 
 stages:
-#  - build
   - format
   - vet
   - security
   - test
+  # - build-docker
   # - test-ssh
+  # - release
   # - deploy
 
 before_script:
@@ -41,7 +42,7 @@ test:
     - go test ./... -v
 
 #build:
-#  stage: build
+#  stage: build-docker
 #  image: docker:20.10.9
 #  services:
 #    - name: docker:20.10.9-dind
@@ -55,6 +56,9 @@ test:
 #    - docker-compose -f docker-compose.yml build
 #    # Push the image to GitLab's registry
 #    - docker-compose -f docker-compose.yml push
+#   only:
+#     - dev
+#     - main
 
 # SSH Connection Test Stage
 #test-ssh:
@@ -73,8 +77,20 @@ test:
 #
 #    # Test SSH connection without deploying
 #    - ssh -o StrictHostKeyChecking=no -p 32222 -i ~/.ssh/id_rsa student-group4@54.36.99.212 "echo SSH connection successful"
+#   only:
+#     - main
+
+# release:
+#  stage: release
+#  image: node:18
+#  script:
+#    - npm ci
+#    - npx semantic-release
 #  only:
-#    - feat/docker_compose  # Run this stage only for the 'feat/docker_compose' branch
+#    - main
+#  when: manual
+#  variables:
+#    gitlab_token: $ci_job_token
 
 # deploy:
 #   stage: deploy
