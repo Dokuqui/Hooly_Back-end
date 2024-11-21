@@ -1,0 +1,102 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "feat/docker_compose"'
+
+stages:
+#  - build
+  - format
+  - vet
+  - security
+  - test
+  # - test-ssh
+  # - deploy
+
+before_script:
+  - echo "Running before_script steps..."
+  - go mod download
+
+format:
+  stage: format
+  image: golang:latest
+  script:
+    - go fmt ./...
+
+vet:
+  stage: vet
+  image: golang:latest
+  script:
+    - go vet -json ./...
+
+security:
+  stage: security
+  image: golang:latest
+  script:
+    - go install github.com/securego/gosec/v2/cmd/gosec@latest
+    - gosec ./...
+
+test:
+  stage: test
+  image: golang:latest
+  script:
+    - go test ./... -v
+
+#build:
+#  stage: build
+#  image: docker:20.10.9
+#  services:
+#    - name: docker:20.10.9-dind
+#  before_script:
+#    # Install Docker Compose
+#    - apk add --no-cache docker-compose
+#  script:
+#    # Log in to GitLab registry
+#    - echo "$CI_JOB_TOKEN" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+#    # Build and tag the Docker image
+#    - docker-compose -f docker-compose.yml build
+#    # Push the image to GitLab's registry
+#    - docker-compose -f docker-compose.yml push
+
+# SSH Connection Test Stage
+#test-ssh:
+#  stage: test-ssh
+#  image: alpine:latest  # Using Alpine Linux with SSH client
+#  script:
+#    - echo "Testing SSH connection to the VPS..."
+#    
+#    # Install SSH client
+#    - apk add --no-cache openssh
+#
+#    # Save SSH key for the deployment process
+#    - mkdir -p ~/.ssh
+#    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+#    - chmod 600 ~/.ssh/id_rsa
+#
+#    # Test SSH connection without deploying
+#    - ssh -o StrictHostKeyChecking=no -p 32222 -i ~/.ssh/id_rsa student-group4@54.36.99.212 "echo SSH connection successful"
+#  only:
+#    - feat/docker_compose  # Run this stage only for the 'feat/docker_compose' branch
+
+# deploy:
+#   stage: deploy
+#   image: appleboy/ssh-action:master
+#   script:
+#     - echo "Deploying to VPS"
+#     # Save SSH key for the deployment process
+#     - mkdir -p ~/.ssh
+#     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+#     - chmod 600 ~/.ssh/id_rsa
+
+#     # SSH into VPS and run the deployment commands
+#     - ssh -o StrictHostKeyChecking=no -p 32222 -i ~/.ssh/id_rsa student-group4@54.36.99.212 << 'EOF'
+#         cd /home/student-group4/tp2/hooly
+#         # Set the environment variables for MongoDB and other settings
+#         export MONGODB_URI="$MONGODB_URI"
+#         export MONGODB_DB_NAME="$MONGODB_NAME"
+#         export ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
+        
+#         # Stop and restart the application with the new image
+#         sudo docker-compose-pull
+#         sudo docker-compose-up -d
+#       EOF
+#   only:
+#     - main
