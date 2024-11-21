@@ -20,7 +20,7 @@ func NewParkingSpotController(parkingSpotController *services.ParkingSpotService
 
 // ListAllParkingSpots handles GET requests to list all parking spots or filter by day
 func (ctrl *ParkingSpotController) ListAllParkingSpots(c *gin.Context) {
-	dayOfWeek := c.Query("day_of_week") // Optional query parameter
+	dayOfWeek := c.Query("day_of_week")
 
 	spots, err := ctrl.ParkingSpotServices.ListAllParkingSpots(dayOfWeek, c.Request.Context())
 	if err != nil {
@@ -38,7 +38,6 @@ func (ctrl *ParkingSpotController) ListAllParkingSpots(c *gin.Context) {
 
 // CreateParkingSpotHandler handles POST requests to create a new parking spot
 func (ctrl *ParkingSpotController) CreateParkingSpotHandler(c *gin.Context) {
-	// Ensure the user is an admin
 	userRole, exists := c.Get("role")
 	if !exists || userRole != "admin" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
@@ -75,7 +74,6 @@ func (ctrl *ParkingSpotController) CreateParkingSpotHandler(c *gin.Context) {
 func (ctrl *ParkingSpotController) UpdateReservationStatus(c *gin.Context) {
 	id := c.Param("id")
 
-	// Validate the ObjectID
 	spotID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid spot ID"})
@@ -86,6 +84,7 @@ func (ctrl *ParkingSpotController) UpdateReservationStatus(c *gin.Context) {
 	var body struct {
 		Reserved bool `json:"reserved"`
 	}
+
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
 		return

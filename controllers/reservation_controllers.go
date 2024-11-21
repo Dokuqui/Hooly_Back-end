@@ -7,7 +7,6 @@ import (
 	"gitlab.com/hooly2/back/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -22,10 +21,8 @@ func NewReservationController(reservationService *services.ReservationService) *
 
 // GetAllReservationsHandler retrieves all reservations (Admin only).
 func (c *ReservationController) GetAllReservationsHandler(ctx *gin.Context) {
-	// Extract the current user's role from the JWT token (JWT middleware will set this in context)
 	currentRole := ctx.GetString("role")
 
-	// Ensure that only admin users can access this endpoint
 	if currentRole != "admin" {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 		return
@@ -43,7 +40,6 @@ func (c *ReservationController) GetAllReservationsHandler(ctx *gin.Context) {
 
 // GetUserReservationsHandler retrieves reservations for the logged-in user.
 func (c *ReservationController) GetUserReservationsHandler(ctx *gin.Context) {
-	// Get user_id from context (set during authentication)
 	userID, err := utils.GetUserIDFromContext(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found in context"})
@@ -68,7 +64,6 @@ func (c *ReservationController) GetReservationByIDHandler(ctx *gin.Context) {
 		return
 	}
 
-	// Get user_id from context (set during authentication)
 	userID, err := utils.GetUserIDFromContext(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found in context"})
@@ -88,14 +83,11 @@ func (c *ReservationController) GetReservationByIDHandler(ctx *gin.Context) {
 func (c *ReservationController) CreateReservationHandler(ctx *gin.Context) {
 	var reservation model.Reservation
 
-	// Bind the JSON body to the reservation struct
 	if err := ctx.ShouldBindJSON(&reservation); err != nil {
-		log.Println("Failed to bind request body:", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
 		return
 	}
 
-	// Convert SpotID to ObjectID
 	spotObjectID, err := primitive.ObjectIDFromHex(reservation.SpotID.Hex())
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid SpotID"})
@@ -106,7 +98,6 @@ func (c *ReservationController) CreateReservationHandler(ctx *gin.Context) {
 	// Retrieve the userID from the context (set by JWT middleware)
 	userID, exists := ctx.Get("userId")
 	if !exists {
-		log.Println("User ID not found in context")
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: user ID missing"})
 		return
 	}
@@ -114,7 +105,6 @@ func (c *ReservationController) CreateReservationHandler(ctx *gin.Context) {
 	// Convert the userID to a primitive.ObjectID
 	objectID, err := primitive.ObjectIDFromHex(userID.(string))
 	if err != nil {
-		log.Println("Invalid user ID:", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -123,7 +113,6 @@ func (c *ReservationController) CreateReservationHandler(ctx *gin.Context) {
 	// Validate that SpotID is a valid ObjectID
 	if !reservation.SpotID.IsZero() {
 		if _, err := primitive.ObjectIDFromHex(reservation.SpotID.Hex()); err != nil {
-			log.Println("Invalid Spot ID:", err)
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Spot ID"})
 			return
 		}
@@ -132,9 +121,6 @@ func (c *ReservationController) CreateReservationHandler(ctx *gin.Context) {
 	// Call the service to create the reservation
 	err = c.ReservationService.CreateReservation(ctx, &reservation)
 	if err != nil {
-		// Log error and respond based on the error message
-		log.Println("Failed to create reservation:", err)
-
 		// Check for specific error messages to send a 400 Bad Request
 		if strings.Contains(err.Error(), "spot is not available") {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Spot is not available"})
@@ -150,7 +136,6 @@ func (c *ReservationController) CreateReservationHandler(ctx *gin.Context) {
 
 	// Ensure the reservation ID is set correctly after insertion
 	if reservation.ID.IsZero() {
-		log.Println("Reservation ID is empty, something went wrong")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create reservation"})
 		return
 	}
@@ -224,7 +209,6 @@ func (c *ReservationController) DeleteReservationHandler(ctx *gin.Context) {
 
 // AdminDeleteReservationHandler deletes any reservation (admin only).
 func (c *ReservationController) AdminDeleteReservationHandler(ctx *gin.Context) {
-	// Check if user is admin
 	userRole, _ := ctx.Get("role")
 	if userRole != "admin" {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "access denied"})

@@ -38,7 +38,6 @@ func (s *ParkingSpotService) CreateParkingSpot(dayOfWeek string, ctx context.Con
 		return nil, fmt.Errorf("failed to query parking spot: %v", err)
 	}
 
-	// Assign max capacity (custom for Friday)
 	totalSpaces := 7
 	if dayOfWeek == "Friday" {
 		totalSpaces = 6
@@ -62,7 +61,6 @@ func (s *ParkingSpotService) CreateParkingSpot(dayOfWeek string, ctx context.Con
 
 // ListAllParkingSpots retrieves all parking spots, filtered by day if specified
 func (s *ParkingSpotService) ListAllParkingSpots(dayOfWeek string, ctx context.Context) ([]model.ParkingSpot, error) {
-	// Create a dynamic filter
 	filter := bson.M{}
 	if dayOfWeek != "" {
 		filter["day_of_week"] = dayOfWeek
