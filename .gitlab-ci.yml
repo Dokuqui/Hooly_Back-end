@@ -27,9 +27,13 @@ build:
 # SSH Connection Test Stage
 test-ssh:
   stage: test-ssh
-  image: appleboy/ssh-action:v1.2.0
+  image: alpine:latest  # Using Alpine Linux with SSH client
   script:
     - echo "Testing SSH connection to the VPS..."
+    
+    # Install SSH client
+    - apk add --no-cache openssh
+
     # Save SSH key for the deployment process
     - mkdir -p ~/.ssh
     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
