@@ -13,7 +13,7 @@ else
 fi
 
 # Define your commit message validation pattern
-PATTERN="^(feat|fix|chore|docs|style|refactor|perf|test)\([a-z]+\): .{1,50}"
+PATTERN="^(feat|fix|chore|docs|style|refactor|perf|test|ci)\([a-z]+\): .{1,50}"
 
 # Validate the commit message
 if [[ ! "$COMMIT_MSG" =~ $PATTERN ]]; then
