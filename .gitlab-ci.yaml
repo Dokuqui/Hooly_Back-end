@@ -1,63 +1,58 @@
 stages:
   - build
-  - test
-  - deploy
+  - test-ssh
+  # - deploy
 
-# Build Stage: Build the Go application inside a Docker container
 build:
   stage: build
-  image: docker:latest
-  script:
-    - docker build -t your-image-name .
-
-  # stage: build
-  # image: golang:1.23
-  # script:
-  #   - go mod tidy
-  #   - go build -o app ./main.go
-    
-  artifacts:
-    paths:
-      - app
-
-# Test Stage: Run Go tests inside the Docker container
-test:
-  stage: test
-  image: golang:1.23
-  script:
-    - go test -v ./...
-  artifacts:
-    when: always
-    reports:
-      junit: report.xml
-
-# Deploy Stage: SSH to VPS and deploy the Docker project
-deploy:
-  stage: deploy
-  image: docker:latest  # Use Docker image to work with docker-compose and docker commands
+  image: docker:20.10.7
   services:
-    - docker:dind  # Docker-in-Docker to allow docker-compose inside CI pipeline
-  variables:
-    DOCKER_HOST: tcp://docker:2375  # Docker service configuration
-  before_script:
-    # Add SSH private key to the CI environment
+    - docker:19.03.12-dind
+  script:
+    # Log in to GitLab registry
+    - echo "$CI_JOB_TOKEN" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    # Build and tag the Docker image
+    - docker-compose -f docker-compose.yml build
+    # Push the image to GitLab's registry
+    - docker-compose -f docker-compose.yml push
+
+# SSH Connection Test Stage
+test-ssh:
+  stage: test-ssh
+  image: appleboy/ssh-action:master
+  script:
+    - echo "Testing SSH connection to the VPS..."
+    # Save SSH key for the deployment process
     - mkdir -p ~/.ssh
     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
-    - ssh-keyscan -H 54.36.99.212 >> ~/.ssh/known_hosts  # Ensure SSH fingerprint is trusted
-  script:
-    - echo "Starting deployment..."
-    
-    # Connect to VPS and copy the docker-compose.yml file
-    - ssh -p 32222 student-group4@54.36.99.212 "mkdir -p /home/student-group4/tp2/holly"
-    - scp -P 32222 docker-compose.yml student-group4@54.36.99.212:/home/student-group4/tp2/holly/
-    
-    # SSH into the VPS, log in to the Docker registry, pull images, and start the project
-    - ssh -p 32222 student-group4@54.36.99.212 << EOF
-        cd /home/student-group4/tp2/holly
-        docker-compose-pull
-        sudo docker-compose-up -d
-      EOF
-    
+
+    # Test SSH connection without deploying
+    - ssh -o StrictHostKeyChecking=no -p 32222 -i ~/.ssh/id_rsa student-group4@54.36.99.212 "echo SSH connection successful"
   only:
-    - main 
+    - feat/docker_compose  # Run this stage only for the 'feat/docker_compose' branch
+
+# deploy:
+#   stage: deploy
+#   image: appleboy/ssh-action:master
+#   script:
+#     - echo "Deploying to VPS"
+#     # Save SSH key for the deployment process
+#     - mkdir -p ~/.ssh
+#     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+#     - chmod 600 ~/.ssh/id_rsa
+
+#     # SSH into VPS and run the deployment commands
+#     - ssh -o StrictHostKeyChecking=no -p 32222 -i ~/.ssh/id_rsa student-group4@54.36.99.212 << 'EOF'
+#         cd /home/student-group4/tp2/hooly
+#         # Set the environment variables for MongoDB and other settings
+#         export MONGODB_URI="$MONGODB_URI"
+#         export MONGODB_DB_NAME="$MONGODB_NAME"
+#         export ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
+        
+#         # Stop and restart the application with the new image
+#         sudo docker-compose-pull
+#         sudo docker-compose-up -d
+#       EOF
+#   only:
+#     - main
