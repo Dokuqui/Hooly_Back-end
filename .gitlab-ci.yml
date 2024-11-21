@@ -27,7 +27,7 @@ build:
 # SSH Connection Test Stage
 test-ssh:
   stage: test-ssh
-  image: appleboy/ssh-action:master
+  image: appleboy/ssh-action:v1.2.0
   script:
     - echo "Testing SSH connection to the VPS..."
     # Save SSH key for the deployment process
