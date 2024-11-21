@@ -1,3 +1,7 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "feat/docker_compose"'
+
 stages:
   - build
   - test-ssh
