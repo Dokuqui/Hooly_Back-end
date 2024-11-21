@@ -4,8 +4,48 @@ workflow:
 
 stages:
   - build
-  - test-ssh
+  - format
+  - vet
+  - security
+  - test
+  # - test-ssh
   # - deploy
+
+before_script:
+  - echo "Running before_script steps..."
+  - go version
+  - go mod download
+
+format:
+  stage: format
+  tags:
+    - local
+  script:
+    - go fmt ./...
+
+vet:
+  stage: vet
+  tags:
+    - local
+  script:
+    - go vet -json ./...
+
+security:
+  stage: security
+  tags:
+    - local
+  script:
+    - go install github.com/securego/gosec/v2/cmd/gosec@latest
+    - gosec ./...
+    - go install golang.org/x/vuln/cmd/govulncheck@latest
+    - govulncheck ./...
+
+test:
+  stage: test
+  tags:
+    - local
+  script:
+    - go test ./... -v
 
 build:
   stage: build
