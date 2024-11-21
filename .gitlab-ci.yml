@@ -11,7 +11,8 @@ build:
   stage: build
   image: docker:20.10.7
   services:
-    - docker:19.03.12-dind
+    - name: docker:19.03.12-dind
+      command: ["--mtu=9001", "--exec-opt", "native.cgroupdriver=cgroupfs"]
   before_script:
     # Install Docker Compose
     - apk add --no-cache docker-compose
