@@ -18,7 +18,7 @@ func NewFoodtruckController(foodtruckController *services.FoodtruckService) *Foo
 	return &FoodtruckController{FoodtruckServices: foodtruckController}
 }
 
-// Add a foodtruck
+// CreateFoodtruck Add a foodtruck
 func (c *FoodtruckController) CreateFoodtruck(ctx *gin.Context) {
 	var foodtruck model.Foodtruck
 
@@ -173,7 +173,6 @@ func (c *FoodtruckController) DeleteFoodtruck(ctx *gin.Context) {
 
 // AdminDeleteFoodtruck deletes any foodtruck (admin only).
 func (c *FoodtruckController) AdminDeleteFoodtruck(ctx *gin.Context) {
-	// Check if user is admin
 	userRole, _ := ctx.Get("role")
 	if userRole != "admin" {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
