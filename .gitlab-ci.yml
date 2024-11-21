@@ -12,6 +12,9 @@ build:
   image: docker:20.10.7
   services:
     - docker:19.03.12-dind
+  before_script:
+    # Install Docker Compose
+    - apk add --no-cache docker-compose
   script:
     # Log in to GitLab registry
     - echo "$CI_JOB_TOKEN" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
