@@ -11,7 +11,6 @@ func RegisterParkingSpotRoutes(r *gin.Engine, parkingSpotController *controllers
 	parking := r.Group("/parkingspots", middleware.AuthMiddleware())
 	{
 		parking.GET("/", parkingSpotController.ListAllParkingSpots)
-		parking.GET("/:id/available", parkingSpotController.IsSpotAvailable)
 		parking.PUT("/:id/reservation", parkingSpotController.UpdateReservationStatus)
 		parking.POST("/create", parkingSpotController.CreateParkingSpotHandler)
 	}
