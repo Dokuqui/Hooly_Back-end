@@ -18,30 +18,22 @@ before_script:
 
 format:
   stage: format
-  tags:
-    - local
   script:
     - go fmt ./...
 
 vet:
   stage: vet
-  tags:
-    - local
   script:
     - go vet -json ./...
 
 security:
   stage: security
-  tags:
-    - local
   script:
     - go install github.com/securego/gosec/v2/cmd/gosec@latest
     - gosec ./...
 
 test:
   stage: test
-  tags:
-    - local
   script:
     - go test ./... -v
 
