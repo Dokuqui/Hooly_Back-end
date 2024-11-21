@@ -1,0 +1,28 @@
+# Ignore IDE settings
+.idea/
+
+
+# Ignore version control files
+.git/
+.gitignore
+
+# Ignore Go build artifacts
+*.exe
+*.out
+*.test
+build/
+bin/
+
+# Ignore Docker-related files
+docker-compose.yml
+
+# Ignore dependency directories
+vendor/
+
+
+# Ignore documentation files
+README.md
+
+# Ignore any other temporary or system files
+.DS_Store
+Thumbs.db

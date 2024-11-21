@@ -1,0 +1,63 @@
+stages:
+  - build
+  - test
+  - deploy
+
+# Build Stage: Build the Go application inside a Docker container
+build:
+  stage: build
+  image: docker:latest
+  script:
+    - docker build -t your-image-name .
+
+  # stage: build
+  # image: golang:1.23
+  # script:
+  #   - go mod tidy
+  #   - go build -o app ./main.go
+    
+  artifacts:
+    paths:
+      - app
+
+# Test Stage: Run Go tests inside the Docker container
+test:
+  stage: test
+  image: golang:1.23
+  script:
+    - go test -v ./...
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+
+# Deploy Stage: SSH to VPS and deploy the Docker project
+deploy:
+  stage: deploy
+  image: docker:latest  # Use Docker image to work with docker-compose and docker commands
+  services:
+    - docker:dind  # Docker-in-Docker to allow docker-compose inside CI pipeline
+  variables:
+    DOCKER_HOST: tcp://docker:2375  # Docker service configuration
+  before_script:
+    # Add SSH private key to the CI environment
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 54.36.99.212 >> ~/.ssh/known_hosts  # Ensure SSH fingerprint is trusted
+  script:
+    - echo "Starting deployment..."
+    
+    # Connect to VPS and copy the docker-compose.yml file
+    - ssh -p 32222 student-group4@54.36.99.212 "mkdir -p /home/student-group4/tp2/holly"
+    - scp -P 32222 docker-compose.yml student-group4@54.36.99.212:/home/student-group4/tp2/holly/
+    
+    # SSH into the VPS, log in to the Docker registry, pull images, and start the project
+    - ssh -p 32222 student-group4@54.36.99.212 << EOF
+        cd /home/student-group4/tp2/holly
+        docker-compose-pull
+        sudo docker-compose-up -d
+      EOF
+    
+  only:
+    - main 

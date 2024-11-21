@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env  # Make sure this path is correct
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongodb
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/hooly
+    networks:
+      - app-network
+    # entrypoint: ["/bin/sh", "-c", "until nc -z mongodb 27017; do echo waiting for mongodb; sleep 2; done; ./holly-back"]
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongo-db
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
