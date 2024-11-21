@@ -9,9 +9,9 @@ stages:
 
 build:
   stage: build
-  image: docker:20.10.7
+  image: docker:20.10.9
   services:
-    - name: docker:19.03.12-dind
+    - name: docker:20.10.9-dind
       command: ["--mtu=9001", "--exec-opt", "native.cgroupdriver=cgroupfs"]
   before_script:
     # Install Docker Compose
