@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"github.com/gin-gonic/gin"
 	"gitlab.com/hooly2/back/model"
 	"gitlab.com/hooly2/back/services"
@@ -23,88 +22,79 @@ func NewParkingSpotController(parkingSpotController *services.ParkingSpotService
 func (ctrl *ParkingSpotController) ListAllParkingSpots(c *gin.Context) {
 	dayOfWeek := c.Query("day_of_week") // Optional query parameter
 
-	spots, err := ctrl.ParkingSpotServices.ListAllParkingSpots(dayOfWeek, c)
+	spots, err := ctrl.ParkingSpotServices.ListAllParkingSpots(dayOfWeek, c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch parking spots"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch parking spots", "details": err.Error()})
+		return
+	}
+
+	if len(spots) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "No parking spots found"})
 		return
 	}
 
 	c.JSON(http.StatusOK, spots)
 }
 
+// CreateParkingSpotHandler handles POST requests to create a new parking spot
 func (ctrl *ParkingSpotController) CreateParkingSpotHandler(c *gin.Context) {
 	// Ensure the user is an admin
-	userRole, _ := c.Get("role")
-	if userRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+	userRole, exists := c.Get("role")
+	if !exists || userRole != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
-	// Get the day of the week from the request body
+	// Parse input data
 	var parkingSpot model.ParkingSpot
 	if err := c.ShouldBindJSON(&parkingSpot); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
-	// Ensure the day_of_week is valid
+	// Validate day_of_week
 	if !utils.IsValidDayOfWeek(parkingSpot.Day) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid day of week"})
 		return
 	}
 
 	// Call the service to create the parking spot
-	createdSpot, err := ctrl.ParkingSpotServices.CreateParkingSpot(parkingSpot.Day, context.Background())
+	createdSpot, err := ctrl.ParkingSpotServices.CreateParkingSpot(parkingSpot.Day, c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Return the created parking spot as JSON
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusCreated, gin.H{
 		"message":      "Parking spot created successfully",
 		"parking_spot": createdSpot,
 	})
 }
 
-// IsSpotAvailable handles GET requests to check parking spot availability
-func (ctrl *ParkingSpotController) IsSpotAvailable(c *gin.Context) {
-	id := c.Param("id")
-	spotID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid spot ID"})
-		return
-	}
-
-	available, err := ctrl.ParkingSpotServices.IsSpotAvailable(spotID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"available": available})
-}
-
 // UpdateReservationStatus handles PUT requests to update reservation status of a parking spot
 func (ctrl *ParkingSpotController) UpdateReservationStatus(c *gin.Context) {
 	id := c.Param("id")
+
+	// Validate the ObjectID
 	spotID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid spot ID"})
 		return
 	}
 
+	// Parse request body
 	var body struct {
 		Reserved bool `json:"reserved"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
 		return
 	}
 
-	err = ctrl.ParkingSpotServices.UpdateReservationStatus(spotID, body.Reserved)
+	// Update reservation status via the service
+	err = ctrl.ParkingSpotServices.UpdateReservationStatus(spotID, body.Reserved, c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update reservation status", "details": err.Error()})
 		return
 	}
 

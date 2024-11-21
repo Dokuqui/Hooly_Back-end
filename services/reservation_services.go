@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"log"
 	"time"
 )
 
@@ -85,11 +86,10 @@ func (s *ReservationService) CreateReservation(ctx context.Context, reservation 
 	}
 
 	// Ensure the food truck has not reserved a spot for the same week
-	// Checking the reservations within the past 7 days
 	existingFilter := bson.M{
 		"food_truck_id": reservation.FoodTruckID,
 		"date": bson.M{
-			"$gte": time.Now().Add(-7 * 24 * time.Hour), // Look for reservations within the past 7 days
+			"$gte": time.Now().Add(-7 * 24 * time.Hour),
 		},
 	}
 	count, err := s.ReservationCollection.CountDocuments(ctx, existingFilter)
@@ -100,66 +100,100 @@ func (s *ReservationService) CreateReservation(ctx context.Context, reservation 
 		return errors.New("food truck already has a reservation for this week")
 	}
 
+	// Ensure the SpotID is in ObjectID format
+	spotID, err := primitive.ObjectIDFromHex(reservation.SpotID.Hex())
+	if err != nil {
+		log.Println("Error converting SpotID to ObjectID:", err)
+		return errors.New("invalid SpotID")
+	}
+
 	// Ensure the parking spot is available for the given day
-	parkingSpotFilter := bson.M{"_id": reservation.SpotID, "status": "available"}
+	parkingSpotFilter := bson.M{"_id": spotID}
 	parkingSpot := model.ParkingSpot{}
 	err = s.ParkingSpotCollection.FindOne(ctx, parkingSpotFilter).Decode(&parkingSpot)
 	if err != nil {
 		if errors.Is(mongo.ErrNoDocuments, err) {
+			log.Println("Spot not found or not available:", err)
 			return errors.New("spot is not available")
 		}
+		log.Println("Error retrieving parking spot:", err)
 		return err
 	}
 
-	// Ensure the max capacity is not exceeded
-	// Here you should check the number of existing reservations for the specific day
-	spotCount, err := s.ReservationCollection.CountDocuments(ctx, bson.M{"spot_id": reservation.SpotID, "date": reservation.Date})
+	log.Printf("Found parking spot: %+v\n", parkingSpot)
+
+	// Ensure the max capacity is not exceeded (calculate used spots for the day)
+	spotCount, err := s.ReservationCollection.CountDocuments(ctx, bson.M{"spot_id": spotID, "date": reservation.Date})
 	if err != nil {
+		log.Println("Error checking reservation count:", err)
 		return errors.New("failed to check spot reservations")
 	}
 
-	// Cast MaxCapacity to int64 for comparison
-	if spotCount >= int64(parkingSpot.MaxCapacity) {
-		return errors.New("no available spots for this day")
-	}
+	log.Printf("Current reservation count for SpotID %s on %s: %d\n", spotID.Hex(), reservation.Date.Weekday(), spotCount)
 
-	// Mark the parking spot as reserved
-	updateSpot := bson.M{"$set": bson.M{"status": "reserved"}}
-	_, err = s.ParkingSpotCollection.UpdateOne(ctx, bson.M{"_id": reservation.SpotID}, updateSpot)
-	if err != nil {
-		return errors.New("failed to update parking spot status")
+	// Decrement the available capacity (convert spotCount to int for comparison)
+	if int(spotCount) >= parkingSpot.MaxCapacity {
+		log.Printf("No available spots for SpotID: %s, MaxCapacity: %d, spotCount: %d\n", spotID.Hex(), parkingSpot.MaxCapacity, spotCount)
+		return errors.New("no available spots for this day")
 	}
 
 	// Insert the reservation into the reservation collection
 	reservation.CreatedAt = time.Now()
-	_, err = s.ReservationCollection.InsertOne(ctx, reservation)
-	return err
+	result, err := s.ReservationCollection.InsertOne(ctx, reservation)
+	if err != nil {
+		log.Println("Error inserting reservation:", err)
+		return err
+	}
+
+	// Ensure the reservation ID is populated
+	reservation.ID = result.InsertedID.(primitive.ObjectID)
+
+	// Increment the reserved count for the parking spot
+	update := bson.M{
+		"$inc": bson.M{
+			"reserved_count": 1, // Increment the reserved spots count
+		},
+	}
+
+	// Update the parking spot's reserved count
+	_, err = s.ParkingSpotCollection.UpdateOne(ctx, bson.M{"_id": spotID}, update)
+	if err != nil {
+		log.Println("Error updating reserved count:", err)
+		return err
+	}
+
+	// Check if the parking spot is now fully reserved and update its status
+	if parkingSpot.ReservedCount+1 >= parkingSpot.MaxCapacity {
+		log.Printf("Spot %s marked as reserved for the day\n", spotID.Hex())
+	} else {
+		log.Printf("Reserved count for SpotID %s updated: %d\n", spotID.Hex(), parkingSpot.ReservedCount+1)
+	}
+
+	log.Printf("Reservation created successfully for SpotID: %s, FoodTruckID: %s\n", spotID.Hex(), reservation.FoodTruckID.Hex())
+	return nil
 }
 
 // UpdateReservation updates an existing reservation.
 func (s *ReservationService) UpdateReservation(ctx context.Context, reservationID primitive.ObjectID, updateData bson.M, userID primitive.ObjectID) error {
+	// Only filter by reservation ID
 	filter := bson.M{"_id": reservationID}
-	if !userID.IsZero() {
-		filter["user_id"] = userID
-	}
+	log.Println("Filter used for querying reservation:", filter)
 
-	// Check if the reservation spot will change
 	var reservation model.Reservation
 	err := s.ReservationCollection.FindOne(ctx, filter).Decode(&reservation)
 	if err != nil {
+		log.Println("Error finding reservation:", err)
 		return errors.New("reservation not found")
 	}
 
 	// If spot is changing, release the old spot
 	if updateData["spot_id"] != nil && updateData["spot_id"] != reservation.SpotID {
-		// Release the old spot
 		releaseSpot := bson.M{"$set": bson.M{"status": "available"}}
 		_, err := s.ParkingSpotCollection.UpdateOne(ctx, bson.M{"_id": reservation.SpotID}, releaseSpot)
 		if err != nil {
 			return err
 		}
 
-		// Mark the new spot as reserved
 		newSpotID := updateData["spot_id"].(primitive.ObjectID)
 		updateSpot := bson.M{"$set": bson.M{"status": "reserved"}}
 		_, err = s.ParkingSpotCollection.UpdateOne(ctx, bson.M{"_id": newSpotID}, updateSpot)
@@ -172,6 +206,7 @@ func (s *ReservationService) UpdateReservation(ctx context.Context, reservationI
 	update := bson.M{"$set": updateData}
 	_, err = s.ReservationCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
+		log.Println("Error updating reservation:", err)
 		return errors.New("failed to update reservation")
 	}
 	return nil
@@ -179,6 +214,7 @@ func (s *ReservationService) UpdateReservation(ctx context.Context, reservationI
 
 // DeleteReservation releases the parking spot when the reservation is deleted.
 func (s *ReservationService) DeleteReservation(ctx context.Context, reservationID primitive.ObjectID, userID primitive.ObjectID) error {
+	// Find the reservation by ID (and optionally user ID if provided)
 	filter := bson.M{"_id": reservationID}
 	if !userID.IsZero() {
 		filter["user_id"] = userID
@@ -190,11 +226,29 @@ func (s *ReservationService) DeleteReservation(ctx context.Context, reservationI
 		return errors.New("reservation not found")
 	}
 
-	// Release the parking spot
-	releaseSpot := bson.M{"$set": bson.M{"status": "available"}}
-	_, err = s.ParkingSpotCollection.UpdateOne(ctx, bson.M{"_id": reservation.SpotID}, releaseSpot)
+	// Find the associated parking spot
+	parkingSpot := model.ParkingSpot{}
+	err = s.ParkingSpotCollection.FindOne(ctx, bson.M{"_id": reservation.SpotID}).Decode(&parkingSpot)
 	if err != nil {
-		return errors.New("failed to release parking spot")
+		return errors.New("parking spot not found")
+	}
+
+	// Decrease the reserved count for the parking spot
+	updateSpot := bson.M{"$inc": bson.M{"reserved_count": -1}} // Decrement reserved count
+	_, err = s.ParkingSpotCollection.UpdateOne(ctx, bson.M{"_id": reservation.SpotID}, updateSpot)
+	if err != nil {
+		return errors.New("failed to update parking spot capacity")
+	}
+
+	// After decrementing the reserved count, check if the spot is still fully reserved
+	spotCount, err := s.ReservationCollection.CountDocuments(ctx, bson.M{"spot_id": reservation.SpotID, "date": reservation.Date})
+	if err != nil {
+		return errors.New("failed to check reservation count")
+	}
+
+	// If the parking spot is no longer fully reserved, mark it as available
+	if int(spotCount) < parkingSpot.MaxCapacity {
+		log.Printf("SpotID %s is now available\n", reservation.SpotID.Hex())
 	}
 
 	// Delete the reservation
@@ -203,17 +257,50 @@ func (s *ReservationService) DeleteReservation(ctx context.Context, reservationI
 		return errors.New("failed to delete reservation")
 	}
 
+	log.Printf("Reservation for SpotID: %s successfully deleted\n", reservation.SpotID.Hex())
 	return nil
 }
 
 // AdminDeleteReservation deletes a reservation without user_id restrictions (admin functionality).
 func (s *ReservationService) AdminDeleteReservation(ctx context.Context, reservationID primitive.ObjectID) error {
+	// Find the reservation by ID
 	filter := bson.M{"_id": reservationID}
+	var reservation model.Reservation
+	err := s.ReservationCollection.FindOne(ctx, filter).Decode(&reservation)
+	if err != nil {
+		return errors.New("reservation not found")
+	}
 
-	_, err := s.ReservationCollection.DeleteOne(ctx, filter)
+	// Find the associated parking spot
+	parkingSpot := model.ParkingSpot{}
+	err = s.ParkingSpotCollection.FindOne(ctx, bson.M{"_id": reservation.SpotID}).Decode(&parkingSpot)
+	if err != nil {
+		return errors.New("parking spot not found")
+	}
+
+	// Decrease the reserved count for the parking spot
+	updateSpot := bson.M{"$inc": bson.M{"reserved_count": -1}}
+	_, err = s.ParkingSpotCollection.UpdateOne(ctx, bson.M{"_id": reservation.SpotID}, updateSpot)
+	if err != nil {
+		return errors.New("failed to update parking spot capacity")
+	}
+
+	// After decrementing the reserved count, check if the spot is still fully reserved
+	spotCount, err := s.ReservationCollection.CountDocuments(ctx, bson.M{"spot_id": reservation.SpotID, "date": reservation.Date})
+	if err != nil {
+		return errors.New("failed to check reservation count")
+	}
+
+	if int(spotCount) < parkingSpot.MaxCapacity {
+		log.Printf("SpotID %s is now available\n", reservation.SpotID.Hex())
+	}
+
+	// Delete the reservation
+	_, err = s.ReservationCollection.DeleteOne(ctx, filter)
 	if err != nil {
 		return errors.New("failed to delete reservation")
 	}
 
+	log.Printf("Reservation for SpotID: %s successfully deleted\n", reservation.SpotID.Hex())
 	return nil
 }
