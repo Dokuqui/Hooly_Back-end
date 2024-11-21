@@ -24,7 +24,7 @@ func Connect() {
 	}
 
 	uri := os.Getenv("MONGODB_URI")
-	dbName := os.Getenv("MONGODB_DB_NAME") // Set in your .env file
+	dbName := os.Getenv("MONGODB_DB_NAME")
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
@@ -41,7 +41,7 @@ func Connect() {
 
 	// Store the client for future use
 	Client = client
-	Database = client.Database(dbName) // Set the DB name here
+	Database = client.Database(dbName)
 }
 
 // GetCollection returns a collection for the given name from the connected DB

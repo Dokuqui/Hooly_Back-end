@@ -10,7 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 )
 
 type AuthService struct {
@@ -51,7 +50,7 @@ func (s *AuthService) Signup(email, firstname, lastname, password string) (*mode
 	}
 
 	// Generate a JWT for the newly created user
-	token, err := utils.GenerateJWT(newUser.ID.Hex(), newUser.Role) // using the GenerateJWT function
+	token, err := utils.GenerateJWT(newUser.ID.Hex(), newUser.Role)
 	if err != nil {
 		return nil, "", errors.New("failed to generate token")
 	}
@@ -69,14 +68,12 @@ func (s *AuthService) Login(email, password string) (string, error) {
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		log.Println("Error comparing password:", err)
 		return "", errors.New("invalid email or password")
 	}
 
 	// Generate JWT token with user ID and role
-	token, err := utils.GenerateJWT(user.ID.Hex(), user.Role) // using the GenerateJWT function
+	token, err := utils.GenerateJWT(user.ID.Hex(), user.Role)
 	if err != nil {
-		log.Println("Error generating JWT:", err)
 		return "", errors.New("failed to generate token")
 	}
 

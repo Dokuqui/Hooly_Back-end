@@ -5,7 +5,6 @@ import (
 	"gitlab.com/hooly2/back/model"
 	"gitlab.com/hooly2/back/services"
 	"go.mongodb.org/mongo-driver/bson"
-	"log"
 	"net/http"
 )
 
@@ -23,7 +22,6 @@ func (ac *AuthController) Signup(c *gin.Context) {
 
 	// Bind incoming JSON to the user struct
 	if err := c.ShouldBindJSON(&user); err != nil {
-		log.Println("Error binding JSON:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
 		return
 	}
@@ -31,7 +29,6 @@ func (ac *AuthController) Signup(c *gin.Context) {
 	// Call the AuthService Signup method
 	newUser, token, err := ac.AuthService.Signup(user.Email, user.Firstname, user.Lastname, user.Password)
 	if err != nil {
-		log.Println("Error during signup:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -55,7 +52,6 @@ func (ac *AuthController) Login(c *gin.Context) {
 
 	// Bind the incoming JSON body to the loginRequest struct
 	if err := c.ShouldBindJSON(&loginRequest); err != nil {
-		log.Println("Error binding JSON:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data"})
 		return
 	}
@@ -63,7 +59,6 @@ func (ac *AuthController) Login(c *gin.Context) {
 	// Call the AuthService Login function
 	token, err := ac.AuthService.Login(loginRequest.Email, loginRequest.Password)
 	if err != nil {
-		log.Println("Error during login:", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
@@ -72,7 +67,6 @@ func (ac *AuthController) Login(c *gin.Context) {
 	var user model.User
 	err = ac.AuthService.UserCollection.FindOne(c, bson.M{"email": loginRequest.Email}).Decode(&user)
 	if err != nil {
-		log.Println("Error fetching user:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching user data"})
 		return
 	}
