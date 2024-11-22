@@ -3,4 +3,6 @@
 .env
 node_modules/
 
-bin/
+bin
+
+.DS_Store

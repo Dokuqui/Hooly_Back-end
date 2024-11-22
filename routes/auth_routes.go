@@ -6,7 +6,7 @@ import (
 )
 
 // RegisterAuthRoutes defines authentication-related routes
-func RegisterAuthRoutes(r *gin.Engine, authController *controllers.AuthController) {
-	r.POST("/signup", authController.Signup)
-	r.POST("/login", authController.Login)
+func RegisterAuthRoutes(api *gin.RouterGroup, authController *controllers.AuthController) {
+	api.POST("/signup", authController.Signup)
+	api.POST("/login", authController.Login)
 }

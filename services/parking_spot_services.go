@@ -38,16 +38,25 @@ func (s *ParkingSpotService) CreateParkingSpot(dayOfWeek string, ctx context.Con
 		return nil, fmt.Errorf("failed to query parking spot: %v", err)
 	}
 
-	totalSpaces := 7
+	// Determine the total number of spots based on the day
+	var totalSpaces int
+	var spotNumbers []int
 	if dayOfWeek == "Friday" {
 		totalSpaces = 6
+		spotNumbers = []int{1, 2, 3, 4, 5, 6} // Friday has 6 spots
+	} else {
+		totalSpaces = 7
+		spotNumbers = []int{1, 2, 3, 4, 5, 6, 7} // Other days have 7 spots
 	}
 
 	// Create the new parking spot document
 	newSpot := model.ParkingSpot{
-		ID:          primitive.NewObjectID(),
-		Day:         dayOfWeek,
-		MaxCapacity: totalSpaces,
+		ID:            primitive.NewObjectID(),
+		Day:           dayOfWeek,
+		MaxCapacity:   totalSpaces,
+		ReservedCount: 0,
+		SpotNumbers:   spotNumbers,
+		ReservedSpots: []int{},
 	}
 
 	// Insert the new parking spot
@@ -66,14 +75,13 @@ func (s *ParkingSpotService) ListAllParkingSpots(dayOfWeek string, ctx context.C
 		filter["day_of_week"] = dayOfWeek
 	}
 
-	// Query the collection
+	// Query the collection to fetch parking spots
 	cursor, err := s.ParkingSpotCollection.Find(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch parking spots: %v", err)
 	}
 	defer cursor.Close(ctx)
 
-	// Decode the results into a slice
 	var spots []model.ParkingSpot
 	for cursor.Next(ctx) {
 		var spot model.ParkingSpot

@@ -6,9 +6,9 @@ import (
 	"gitlab.com/hooly2/back/middleware"
 )
 
-func RegisterParkingSpotRoutes(r *gin.Engine, parkingSpotController *controllers.ParkingSpotController) {
+func RegisterParkingSpotRoutes(api *gin.RouterGroup, parkingSpotController *controllers.ParkingSpotController) {
 
-	parking := r.Group("/parkingspots", middleware.AuthMiddleware())
+	parking := api.Group("/parkingspots", middleware.AuthMiddleware())
 	{
 		parking.GET("/", parkingSpotController.ListAllParkingSpots)
 		parking.PUT("/:id/reservation", parkingSpotController.UpdateReservationStatus)

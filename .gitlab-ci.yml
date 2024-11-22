@@ -31,7 +31,6 @@ vet:
   script:
     - go vet -json ./...
 
-
 security:
   stage: security
   image: golang:latest
@@ -42,7 +41,6 @@ security:
     - go install github.com/securego/gosec/v2/cmd/gosec@latest
     - gosec ./...
 
-
 test:
   stage: test
   image: golang:latest
@@ -51,7 +49,6 @@ test:
     - go mod download
   script:
     - go test ./... -v
- 
 
 release:
   stage: release
@@ -65,13 +62,12 @@ release:
   variables:
     GITLAB_TOKEN: $GITLAB_TOKEN
 
-
 build:
   stage: build-docker
   image: docker:27.3.1
   services:
     - name: docker:27.3.1-dind
-  script:   
+  script:
     # Log in to the GitLab Docker registry
     - echo $CI_JOB_TOKEN | docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
 
@@ -81,8 +77,8 @@ build:
     # Push the Docker image to the GitLab registry
     - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
   only:
+    - dev
     - main
-
 
 deploy:
   stage: deploy
@@ -103,11 +99,11 @@ deploy:
     - export MONGODB_URI="$MONGODB_URI"
     - export MONGODB_DB_NAME="$MONGODB_DB_NAME"
     - export ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
-    - envsubst < docker-compose.tmpl > docker-compose.generated.yml
+    - envsubst < docker-compose.tmpl > docker-compose.yml
     # Create the target directory on the server
     - ssh -p "$SSH_PORT" -i ~/.ssh/id_rsa "$SSH_IP_KEY" "mkdir -p /home/$SSH_USER/tp2/$CI_PROJECT_NAME"
     # Copy docker-compose.tmpl to the server
-    - scp -P "$SSH_PORT" docker-compose.generated.yml "$SSH_IP_KEY:/home/$SSH_USER/tp2/$CI_PROJECT_NAME"
+    - scp -P "$SSH_PORT" docker-compose.yml "$SSH_IP_KEY:/home/$SSH_USER/tp2/$CI_PROJECT_NAME"
     - ssh -o StrictHostKeyChecking=no -T -p "$SSH_PORT" "$SSH_IP_KEY" "sudo docker-login $CI_REGISTRY_USER $CI_REGISTRY_PASSWORD $CI_REGISTRY"
     # SSH into VPS and run the deployment commands
     - |
@@ -122,4 +118,3 @@ deploy:
       EOF
   only:
     - main
-
