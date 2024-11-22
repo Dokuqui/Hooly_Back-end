@@ -7,8 +7,8 @@ import (
 )
 
 // RegisterAdminRoutes defines admin-only routes
-func RegisterAdminRoutes(r *gin.Engine, userController *controllers.UserController, logController *controllers.LogController, monitoringController *controllers.MonitoringController) {
-	admin := r.Group("/")
+func RegisterAdminRoutes(api *gin.RouterGroup, userController *controllers.UserController, logController *controllers.LogController, monitoringController *controllers.MonitoringController) {
+	admin := api.Group("/admin")
 	admin.Use(middleware.AuthMiddleware(), middleware.RoleMiddleware("admin"))
 	{
 		admin.GET("/users", userController.GetAllUsers)
