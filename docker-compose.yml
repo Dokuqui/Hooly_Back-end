@@ -2,15 +2,15 @@ version: '3.8'
 
 services:
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${CI_REGISTRY_IMAGE}:latest
     ports:
-      - "8080:8080"
+      - "127.0.0.1:14001:8080"
     depends_on:
       - mongodb
     environment:
-      - MONGODB_URI=mongodb://mongodb:27017/hooly
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     networks:
       - app-network
     entrypoint: ["/bin/sh", "-c", "until nc -z mongodb 27017; do echo waiting for mongodb; sleep 2; done; ./holly-back"]

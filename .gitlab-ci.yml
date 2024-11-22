@@ -48,23 +48,6 @@ test:
   tags:
     - student-group4-runner
 
-build:
-  stage: build-docker
-  image: docker:20.10.9
-  services:
-    - name: docker:20.10.9-dind
-  before_script:
-    - apk add --no-cache docker-compose
-  script:
-    - echo "$CI_JOB_TOKEN" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
-    # Build and tag the Docker image
-    - docker-compose -f docker-compose.yml build
-    # Push the image to GitLab's registry
-    - docker-compose -f docker-compose.yml push
-  only:
-     - dev
-     - main
-
 release:
   stage: release
   image: node:18
@@ -76,33 +59,61 @@ release:
   when: manual
   variables:
     GITLAB_TOKEN: $CI_JOB_TOKEN
+  tags:
+    - student-group4-runner
+
+build:
+  stage: build-docker
+  image: docker:20.10.9
+  services:
+    - name: docker:20.10.9-dind
+  script:
+    # Log in to the GitLab Docker registry
+    - echo $CI_JOB_TOKEN | sudo docker-login $CI_REGISTRY_USER $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+    # Build the Docker image with the current commit reference tag
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME .
+
+    # Push the Docker image to the GitLab registry
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+  only:
+    - dev
+    - main
 
 deploy:
   stage: deploy
-  image: alpine:latest
-  script:
-    - echo "Deploying to VPS"
-
-    # Install SSH client
+  image: docker:latest
+  before_script:
+    # Install SSH client et Docker Compose
     - apk add --no-cache openssh
-
+    # Configure shh to deploy
+    - echo "Configure SSH"
     # Save SSH key for the deployment process
     - mkdir -p ~/.ssh
     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
-
+    - ssh-keyscan -p $SSH_PORT -H $SSH_HOST >> ~/.ssh/known_hosts
+  script:
+    - echo "Deploying to VPS"
+    # Create the target directory on the server
+    - ssh -p "$SSH_PORT" -i ~/.ssh/id_rsa "$SSH_IP_KEY" "mkdir -p /home/$SSH_USER/tp2/$CI_PROJECT_NAME"
+    # Copy docker-compose.yml to the server
+    - scp -P "$SSH_PORT" docker-compose.yml "$SSH_IP_KEY:/home/$SSH_USER/tp2/$CI_PROJECT_NAME"
     # SSH into VPS and run the deployment commands
     - |
-      ssh -o StrictHostKeyChecking=no -p 32222 -i ~/.ssh/id_rsa student-group4@54.36.99.212 << 'EOF'
-        cd /home/student-group4/tp2/hooly
-        # Set the environment variables for MongoDB and other settings
+      ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" -i ~/.ssh/id_rsa "$SSH_IP_KEY" << EOF
+        set -e
+        cd /home/"$SSH_USER"/tp2/$CI_PROJECT_NAME
+    # Set the environment variables for MongoDB and other settings
         export MONGODB_URI="$MONGODB_URI"
-        export MONGODB_DB_NAME="$MONGODB_NAME"
+        export MONGODB_DB_NAME="$MONGODB_DB_NAME"
         export ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
+        export CI_REGISTRY_IMAGE="$CI_REGISTRY_IMAGE"
 
-        # Start the application with the new image
+    # Pull the latest backend image from the registry
         sudo docker-compose-pull
-        sudo docker-compose-up -d
+
+        sudo docker-compose-up
       EOF
   tags:
     - student-group4-runner
