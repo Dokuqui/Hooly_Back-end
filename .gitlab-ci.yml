@@ -104,13 +104,13 @@ deploy:
       ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" -i ~/.ssh/id_rsa "$SSH_IP_KEY" << EOF
         set -e
         cd /home/"$SSH_USER"/tp2/$CI_PROJECT_NAME
-    # Set the environment variables for MongoDB and other settings
+        # Set the environment variables for MongoDB and other settings
         export MONGODB_URI="$MONGODB_URI"
         export MONGODB_DB_NAME="$MONGODB_DB_NAME"
         export ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
         export CI_REGISTRY_IMAGE="$CI_REGISTRY_IMAGE"
 
-    # Pull the latest backend image from the registry
+        # Pull the latest backend image from the registry
         sudo docker-compose-pull
 
         sudo docker-compose-up
