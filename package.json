@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "API services for hooly app.",
   "main": "index.js",
+  "repositoryUrl": "https://gitlab.com/hooly2/back.git",
   "scripts": {
     "build": "go build -o dist/your-binary-name .",
     "release": "semantic-release"

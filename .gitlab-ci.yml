@@ -1,35 +1,42 @@
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'dev'
 
 stages:
   - format
   - vet
   - security
   - test
-  - build-docker
   - release
+  - build-docker
   - deploy
-
-before_script:
-  - echo "Running before_script steps..."
-  - go mod download
 
 format:
   stage: format
   image: golang:latest
+  before_script:
+    - echo "Running before_script steps..."
+    - go mod download
   script:
     - go fmt ./...
 
 vet:
   stage: vet
   image: golang:latest
+  before_script:
+    - echo "Running before_script steps..."
+    - go mod download
   script:
     - go vet -json ./...
 
 security:
   stage: security
   image: golang:latest
+  before_script:
+    - echo "Running before_script steps..."
+    - go mod download
   script:
     - go install github.com/securego/gosec/v2/cmd/gosec@latest
     - gosec ./...
@@ -37,20 +44,22 @@ security:
 test:
   stage: test
   image: golang:latest
+  before_script:
+    - echo "Running before_script steps..."
+    - go mod download
   script:
     - go test ./... -v
 
 release:
   stage: release
-  image: node:18
+  image: node:latest
   script:
     - npm install
     - npx semantic-release
   only:
     - main
-  when: manual
   variables:
-    GITLAB_TOKEN: $CI_JOB_TOKEN
+    GITLAB_TOKEN: $GITLAB_TOKEN
 
 build:
   stage: build-docker
