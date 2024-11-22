@@ -38,6 +38,25 @@ func (c *ReservationController) GetAllReservationsHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": reservations})
 }
 
+// GetAllUserReservationsHandler retrieves all reservations for the current user (without userID and foodTruckID).
+func (c *ReservationController) GetAllUserReservationsHandler(ctx *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found in context"})
+		return
+	}
+
+	// Fetch all reservations for the user
+	reservations, err := c.ReservationService.GetUserReservations(ctx, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Return the reservations without sensitive information
+	ctx.JSON(http.StatusOK, gin.H{"data": reservations})
+}
+
 // GetUserReservationsHandler retrieves reservations for the logged-in user.
 func (c *ReservationController) GetUserReservationsHandler(ctx *gin.Context) {
 	userID, err := utils.GetUserIDFromContext(ctx)
@@ -232,18 +251,4 @@ func (c *ReservationController) AdminDeleteReservationHandler(ctx *gin.Context) 
 
 	// Respond to the client with a success message
 	ctx.JSON(http.StatusOK, gin.H{"message": "reservation deleted successfully"})
-}
-func (c *ReservationController) GetAllReservedSlotsHandler(ctx *gin.Context) {
-    slots, err := c.ReservationService.GetAllFutureReservations(ctx.Request.Context())
-    if err != nil {
-        ctx.JSON(http.StatusInternalServerError, gin.H{
-            "error": "Erreur lors de la récupération des créneaux réservés",
-            "details": err.Error(),
-        })
-        return
-    }
-
-    ctx.JSON(http.StatusOK, gin.H{
-        "data": slots,
-    })
 }

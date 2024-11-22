@@ -6,9 +6,9 @@ import (
 	"gitlab.com/hooly2/back/middleware"
 )
 
-func RegisterReservationRoutes(r *gin.Engine, reservationController *controllers.ReservationController) {
+func RegisterReservationRoutes(api *gin.RouterGroup, reservationController *controllers.ReservationController) {
 
-	reservation := r.Group("/reservation", middleware.AuthMiddleware())
+	reservation := api.Group("/reservation", middleware.AuthMiddleware())
 	{
 		reservation.GET("/admin", reservationController.GetAllReservationsHandler)
 		reservation.GET("/:id", reservationController.GetReservationByIDHandler)
@@ -17,8 +17,7 @@ func RegisterReservationRoutes(r *gin.Engine, reservationController *controllers
 		reservation.PUT("/:id", reservationController.UpdateReservationHandler)
 		reservation.DELETE("/:id", reservationController.DeleteReservationHandler)
 		reservation.GET("/user", reservationController.GetUserReservationsHandler)
+		reservation.GET("/users", reservationController.GetAllUserReservationsHandler)
 		reservation.GET("/user/:id", reservationController.GetReservationByIDHandler)
-        reservation.GET("/slots/all", reservationController.GetAllReservedSlotsHandler)
-
 	}
 }

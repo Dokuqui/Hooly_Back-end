@@ -7,12 +7,12 @@ import (
 )
 
 // RegisterUserRoutes defines user-specific routes
-func RegisterUserRoutes(r *gin.Engine, userController *controllers.UserController) {
-	user := r.Group("/")
+func RegisterUserRoutes(api *gin.RouterGroup, userController *controllers.UserController) {
+	user := api.Group("/user")
 	user.Use(middleware.AuthMiddleware())
 	{
 		// User routes
-		user.GET("/users/:id", userController.GetUserDetails)
-		user.PUT("/users/:id", userController.UpdateUserDetails)
+		user.GET("/:id", userController.GetUserDetails)
+		user.PUT("/:id", userController.UpdateUserDetails)
 	}
 }

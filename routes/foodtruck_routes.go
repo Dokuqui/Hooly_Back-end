@@ -6,9 +6,9 @@ import (
 	"gitlab.com/hooly2/back/middleware"
 )
 
-func RegisterFoodtruckRoutes(r *gin.Engine, foodtruckController *controllers.FoodtruckController) {
+func RegisterFoodtruckRoutes(api *gin.RouterGroup, foodtruckController *controllers.FoodtruckController) {
 
-	foodtruck := r.Group("/foodtrucks", middleware.AuthMiddleware())
+	foodtruck := api.Group("/foodtrucks", middleware.AuthMiddleware())
 	{
 		foodtruck.GET("/", foodtruckController.GetAllFoodTrucks)
 		foodtruck.GET("/:id", foodtruckController.GetFoodtruckByIDHandler)

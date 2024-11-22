@@ -12,13 +12,18 @@ import (
 
 // SetupRouter initializes the router with all routes
 func SetupRouter() *gin.Engine {
+	// Initialize the main gin.Engine router
 	r := gin.Default()
 
+	// Load environment variables from .env file
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
+
+	// Get allowed origins for CORS from environment variables
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
 
+	// Configure CORS settings
 	config := cors.Config{
 		AllowOrigins:     []string{allowedOrigins},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -26,6 +31,7 @@ func SetupRouter() *gin.Engine {
 		AllowCredentials: true,
 	}
 
+	// Apply CORS middleware
 	r.Use(cors.New(config))
 
 	// Initialize services
@@ -46,13 +52,19 @@ func SetupRouter() *gin.Engine {
 	parkingSpotController := controllers.NewParkingSpotController(parkingSpotService)
 	reservationController := controllers.NewReservationController(reservationService)
 
-	// Define routes
-	RegisterAuthRoutes(r, authController)
-	RegisterAdminRoutes(r, userController, logController, monitoringController)
-	RegisterUserRoutes(r, userController)
-	RegisterFoodtruckRoutes(r, foodtruckController)
-	RegisterParkingSpotRoutes(r, parkingSpotController)
-	RegisterReservationRoutes(r, reservationController)
+	// Define a route group for '/api'
+	api := r.Group("/api") // Create a group for '/api'
+	{
+		// Register all the routes under the '/api' group
+		RegisterAuthRoutes(api, authController)                                       // Use *gin.Engine
+		RegisterAdminRoutes(api, userController, logController, monitoringController) // Use *gin.Engine
+		RegisterUserRoutes(api, userController)                                       // Use *gin.Engine
+		RegisterFoodtruckRoutes(api, foodtruckController)                             // Use *gin.Engine
+		RegisterParkingSpotRoutes(api, parkingSpotController)                         // Use *gin.Engine
+		RegisterReservationRoutes(api, reservationController)                         // Use *gin.Engine
+	}
 
+	// Return the main Gin router object, which is *gin.Engine
 	return r
+
 }
