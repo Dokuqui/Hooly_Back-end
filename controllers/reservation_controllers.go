@@ -40,14 +40,8 @@ func (c *ReservationController) GetAllReservationsHandler(ctx *gin.Context) {
 
 // GetAllUserReservationsHandler retrieves all reservations for the current user (without userID and foodTruckID).
 func (c *ReservationController) GetAllUserReservationsHandler(ctx *gin.Context) {
-	userID, err := utils.GetUserIDFromContext(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found in context"})
-		return
-	}
-
 	// Fetch all reservations for the user
-	reservations, err := c.ReservationService.GetUserReservations(ctx, userID)
+	reservations, err := c.ReservationService.GetAllUserReservations(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
