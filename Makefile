@@ -8,10 +8,10 @@ BIN := $(BUILD_DIR)/$(APP_NAME)
 .DEFAULT_GOAL := run
 
 # Commands
-.PHONY: run build lint test deps clean help
+.PHONY: run build format test deps clean help
 
 # Run the application
-run: lint test deps build
+run: format test deps build
 	@echo "Running $(APP_NAME)..."
 	@$(BIN)
 
