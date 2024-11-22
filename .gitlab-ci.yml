@@ -99,11 +99,11 @@ deploy:
     - export MONGODB_URI="$MONGODB_URI"
     - export MONGODB_DB_NAME="$MONGODB_DB_NAME"
     - export ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
-    - envsubst < docker-compose.tmpl > docker-compose.generated.yml
+    - envsubst < docker-compose.tmpl > docker-compose.yml
     # Create the target directory on the server
     - ssh -p "$SSH_PORT" -i ~/.ssh/id_rsa "$SSH_IP_KEY" "mkdir -p /home/$SSH_USER/tp2/$CI_PROJECT_NAME"
     # Copy docker-compose.tmpl to the server
-    - scp -P "$SSH_PORT" docker-compose.generated.yml "$SSH_IP_KEY:/home/$SSH_USER/tp2/$CI_PROJECT_NAME"
+    - scp -P "$SSH_PORT" docker-compose.yml "$SSH_IP_KEY:/home/$SSH_USER/tp2/$CI_PROJECT_NAME"
     - ssh -o StrictHostKeyChecking=no -T -p "$SSH_PORT" "$SSH_IP_KEY" "sudo docker-login $CI_REGISTRY_USER $CI_REGISTRY_PASSWORD $CI_REGISTRY"
     # SSH into VPS and run the deployment commands
     - |
