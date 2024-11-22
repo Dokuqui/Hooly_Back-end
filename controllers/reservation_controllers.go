@@ -249,3 +249,17 @@ func (c *ReservationController) AdminDeleteReservationHandler(ctx *gin.Context) 
 	// Respond to the client with a success message
 	ctx.JSON(http.StatusOK, gin.H{"message": "reservation deleted successfully"})
 }
+func (c *ReservationController) GetAllReservedSlotsHandler(ctx *gin.Context) {
+    slots, err := c.ReservationService.GetAllFutureReservations(ctx.Request.Context())
+    if err != nil {
+        ctx.JSON(http.StatusInternalServerError, gin.H{
+            "error": "Erreur lors de la récupération des créneaux réservés",
+            "details": err.Error(),
+        })
+        return
+    }
+
+    ctx.JSON(http.StatusOK, gin.H{
+        "data": slots,
+    })
+}

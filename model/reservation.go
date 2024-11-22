@@ -8,6 +8,7 @@ import (
 type Reservation struct {
 	ID          primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	SpotID      primitive.ObjectID `json:"spot_id,omitempty" bson:"spot_id,omitempty"`             // References ParkingSpot
+	SpotNumber  int                `bson:"spot_number,omitempty"`
 	FoodTruckID primitive.ObjectID `json:"food_truck_id,omitempty" bson:"food_truck_id,omitempty"` // References FoodTruck
 	UserID      primitive.ObjectID `json:"user_id,omitempty" bson:"user_id,omitempty"`             // References User
 	Date        time.Time          `json:"date,omitempty" bson:"date,omitempty"`                   // Reservation date
