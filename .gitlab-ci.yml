@@ -99,6 +99,7 @@ deploy:
     - export MONGODB_URI="$MONGODB_URI"
     - export MONGODB_DB_NAME="$MONGODB_DB_NAME"
     - export ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
+    - export CI_COMMIT_REF_NAME="$CI_COMMIT_REF_NAME"
     - envsubst < docker-compose.tmpl > docker-compose.yml
     # Create the target directory on the server
     - ssh -p "$SSH_PORT" -i ~/.ssh/id_rsa "$SSH_IP_KEY" "mkdir -p /home/$SSH_USER/tp2/$CI_PROJECT_NAME"

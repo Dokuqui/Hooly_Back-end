@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   backend:
-    image: $CI_REGISTRY_IMAGE:latest
+    image: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
     ports:
       - "127.0.0.1:14001:8080"
     depends_on:
