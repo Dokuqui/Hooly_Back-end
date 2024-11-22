@@ -18,5 +18,7 @@ func RegisterReservationRoutes(r *gin.Engine, reservationController *controllers
 		reservation.DELETE("/:id", reservationController.DeleteReservationHandler)
 		reservation.GET("/user", reservationController.GetUserReservationsHandler)
 		reservation.GET("/user/:id", reservationController.GetReservationByIDHandler)
+        reservation.GET("/slots/all", reservationController.GetAllReservedSlotsHandler)
+
 	}
 }

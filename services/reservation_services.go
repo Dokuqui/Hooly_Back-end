@@ -270,3 +270,29 @@ func (s *ReservationService) AdminDeleteReservation(ctx context.Context, reserva
 
 	return nil
 }
+
+func (s *ReservationService) GetAllFutureReservations(ctx context.Context) ([]model.Reservation, error) {
+    now := time.Now()
+    startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+
+    filter := bson.M{
+        "date": bson.M{
+            "$gte": startOfDay,
+        },
+    }
+
+
+    cursor, err := s.ReservationCollection.Find(ctx, filter)
+    if err != nil {
+        return nil, err
+    }
+    defer cursor.Close(ctx)
+
+    var reservations []model.Reservation
+    if err := cursor.All(ctx, &reservations); err != nil {
+        return nil, err
+    }
+
+    return reservations, nil
+}
