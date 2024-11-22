@@ -1,6 +1,6 @@
 # Define variables
 APP_NAME := hooly
-SRC := ./cmd/main.go
+SRC := ./main.go
 BUILD_DIR := ./bin
 BIN := $(BUILD_DIR)/$(APP_NAME)
 

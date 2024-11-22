@@ -20,16 +20,12 @@ format:
   image: golang:latest
   script:
     - go fmt ./...
-  tags:
-    - student-group4-runner
 
 vet:
   stage: vet
   image: golang:latest
   script:
     - go vet -json ./...
-  tags:
-    - student-group4-runner
 
 security:
   stage: security
@@ -37,16 +33,12 @@ security:
   script:
     - go install github.com/securego/gosec/v2/cmd/gosec@latest
     - gosec ./...
-  tags:
-    - student-group4-runner
 
 test:
   stage: test
   image: golang:latest
   script:
     - go test ./... -v
-  tags:
-    - student-group4-runner
 
 release:
   stage: release
@@ -59,8 +51,6 @@ release:
   when: manual
   variables:
     GITLAB_TOKEN: $CI_JOB_TOKEN
-  tags:
-    - student-group4-runner
 
 build:
   stage: build-docker
@@ -115,7 +105,5 @@ deploy:
 
         sudo docker-compose-up
       EOF
-  tags:
-    - student-group4-runner
   only:
     - main
