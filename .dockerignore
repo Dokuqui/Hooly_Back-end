@@ -14,7 +14,7 @@ build/
 bin/
 
 # Ignore Docker-related files
-docker-compose.yml
+docker-compose.tmpl
 
 # Ignore dependency directories
 vendor/

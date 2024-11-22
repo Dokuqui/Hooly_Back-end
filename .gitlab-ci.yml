@@ -31,6 +31,7 @@ vet:
   script:
     - go vet -json ./...
 
+
 security:
   stage: security
   image: golang:latest
@@ -41,6 +42,7 @@ security:
     - go install github.com/securego/gosec/v2/cmd/gosec@latest
     - gosec ./...
 
+
 test:
   stage: test
   image: golang:latest
@@ -49,6 +51,7 @@ test:
     - go mod download
   script:
     - go test ./... -v
+ 
 
 release:
   stage: release
@@ -58,19 +61,19 @@ release:
     - npx semantic-release
   only:
     - main
+  when: manual
   variables:
     GITLAB_TOKEN: $GITLAB_TOKEN
 
+
 build:
   stage: build-docker
-  image: docker:latest
+  image: docker:27.3.1
   services:
-    - name: docker:latest-dind
-  before_script:
-    - apk add --no-cache sudo
-  script:
+    - name: docker:27.3.1-dind
+  script:   
     # Log in to the GitLab Docker registry
-    - echo $CI_JOB_TOKEN | sudo docker-login $CI_REGISTRY_USER $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo $CI_JOB_TOKEN | docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
 
     # Build the Docker image with the current commit reference tag
     - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME .
@@ -78,15 +81,15 @@ build:
     # Push the Docker image to the GitLab registry
     - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
   only:
-    - dev
     - main
+
 
 deploy:
   stage: deploy
   image: docker:latest
   before_script:
     # Install SSH client et Docker Compose
-    - apk add --no-cache openssh
+    - apk add --no-cache openssh gettext
     # Configure shh to deploy
     - echo "Configure SSH"
     # Save SSH key for the deployment process
@@ -96,20 +99,21 @@ deploy:
     - ssh-keyscan -p $SSH_PORT -H $SSH_HOST >> ~/.ssh/known_hosts
   script:
     - echo "Deploying to VPS"
+    - export CI_REGISTRY_IMAGE="$CI_REGISTRY_IMAGE"
+    - export MONGODB_URI="$MONGODB_URI"
+    - export MONGODB_DB_NAME="$MONGODB_DB_NAME"
+    - export ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
+    - envsubst < docker-compose.tmpl > docker-compose.generated.yml
     # Create the target directory on the server
     - ssh -p "$SSH_PORT" -i ~/.ssh/id_rsa "$SSH_IP_KEY" "mkdir -p /home/$SSH_USER/tp2/$CI_PROJECT_NAME"
-    # Copy docker-compose.yml to the server
-    - scp -P "$SSH_PORT" docker-compose.yml "$SSH_IP_KEY:/home/$SSH_USER/tp2/$CI_PROJECT_NAME"
+    # Copy docker-compose.tmpl to the server
+    - scp -P "$SSH_PORT" docker-compose.generated.yml "$SSH_IP_KEY:/home/$SSH_USER/tp2/$CI_PROJECT_NAME"
+    - ssh -o StrictHostKeyChecking=no -T -p "$SSH_PORT" "$SSH_IP_KEY" "sudo docker-login $CI_REGISTRY_USER $CI_REGISTRY_PASSWORD $CI_REGISTRY"
     # SSH into VPS and run the deployment commands
     - |
-      ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" -i ~/.ssh/id_rsa "$SSH_IP_KEY" << EOF
+      ssh -o StrictHostKeyChecking=no -T -p "$SSH_PORT" -i ~/.ssh/id_rsa "$SSH_IP_KEY" << EOF
         set -e
         cd /home/"$SSH_USER"/tp2/$CI_PROJECT_NAME
-        # Set the environment variables for MongoDB and other settings
-        export MONGODB_URI="$MONGODB_URI"
-        export MONGODB_DB_NAME="$MONGODB_DB_NAME"
-        export ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
-        export CI_REGISTRY_IMAGE="$CI_REGISTRY_IMAGE"
 
         # Pull the latest backend image from the registry
         sudo docker-compose-pull
@@ -118,3 +122,4 @@ deploy:
       EOF
   only:
     - main
+
