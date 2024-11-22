@@ -77,6 +77,7 @@ build:
     # Push the Docker image to the GitLab registry
     - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
   only:
+    - dev
     - main
 
 deploy:
